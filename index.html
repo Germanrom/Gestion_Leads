@@ -33,11 +33,25 @@
                     <input type="email" id="email" class="form-control" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Origen</label>
+                    <!--<label class="form-label">Origen</label>
                     <select id="origen" class="form-select">
+                        //<option value="Genuino">Genuino de Empresa</option>
+                        //<option value="Comisionista">Comisionista</option>
+                    </select>-->
+                    <!--<div class="col-md-4">-->
+                     <label class="form-label">Origen</label>
+                     <select id="origen" class="form-select" onchange="toggleComisionistas()">
                         <option value="Genuino">Genuino de Empresa</option>
                         <option value="Comisionista">Comisionista</option>
                     </select>
+                </div>
+                <div class="col-md-8" id="divComisionistas" style="display: none;">
+                    <label class="form-label">Seleccionar Comisionista (Editable en Excel)</label>
+                    <select id="selectComis" class="form-select">
+                    </select>
+                    <div id="detalleComis" class="form-text text-primary font-italic"></div>
+                    </div>
+
                 </div>
                 <div class="col-md-8">
                     <label class="form-label">Comentarios / Seguimiento</label>
@@ -73,7 +87,8 @@
 </div>
 
 <script>
-  const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbwNcydeoUCSrxpc-oMCCUCcKJP6nLaPVIuJo1kTYET1a_4q3BBrSZRHYWQEt84Pi-1y/exec"
+  const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbwBfiE_K5ShJTQu3kdGXgCwxptHaNS8UqSChgS45OH46epYjJrdQrjbj-1j61poHL6S/exec"
+                           //https://script.google.com/macros/s/AKfycbwNcydeoUCSrxpc-oMCCUCcKJP6nLaPVIuJo1kTYET1a_4q3BBrSZRHYWQEt84Pi-1y/exec - url vieja de app script
 const leadForm = document.getElementById('leadForm');
 const tablaLeads = document.getElementById('tablaLeads');
 
@@ -138,6 +153,46 @@ leadForm.addEventListener('submit', async (e) => {
     cargarLeads();
 });
 
+
+let listaComisionistas = [];
+
+// Función para mostrar/ocultar campos
+function toggleComisionistas() {
+    const origen = document.getElementById('origen').value;
+    const div = document.getElementById('divComisionistas');
+    div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
+    actualizarDetalleComis();
+}
+
+// Al cambiar de comisionista, mostramos su acuerdo
+document.getElementById('selectComis').addEventListener('change', actualizarDetalleComis);
+
+function actualizarDetalleComis() {
+    const nombre = document.getElementById('selectComis').value;
+    const comi = listaComisionistas.find(c => c.nombre === nombre);
+    if (comi) {
+        document.getElementById('detalleComis').innerText = `Contacto: ${comi.contacto} | Acuerdo: ${comi.acuerdo}`;
+    }
+}
+
+// Modifica tu función cargarLeads original para que acepte la nueva estructura
+async function cargarLeads() {
+    const response = await fetch(URL_GOOGLE_SCRIPT);
+    const data = await response.json();
+    
+    // Guardamos y cargamos comisionistas
+    listaComisionistas = data.comisionistas;
+    const select = document.getElementById('selectComis');
+    select.innerHTML = listaComisionistas.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+    
+    renderizarTabla(data.leads);
+}
+
+// Ajusta el guardado para que incluya al comisionista en el origen
+// En la parte del 'submit', cambia el campo origen por esto:
+const origenFinal = (document.getElementById('origen').value === 'Comisionista') 
+    ? "Comisionista: " + document.getElementById('selectComis').value 
+    : "Genuino";
 // El botón de reporte seguirá funcionando igual, 
 // pero descargará lo que esté cargado en ese momento en la tabla.
 
