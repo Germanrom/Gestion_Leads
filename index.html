@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Leads - Mi Empresa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { margin-top: 30px; }
+        .card { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="text-center mb-4">Sistema de Gestión de Leads</h2>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">Registrar Nuevo Cliente / Lead</div>
+        <div class="card-body">
+            <form id="leadForm" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nombre / Razón Social</label>
+                    <input type="text" id="nombre" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Celular</label>
+                    <input type="tel" id="celular" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Origen</label>
+                    <select id="origen" class="form-select">
+                        <option value="Genuino">Genuino de Empresa</option>
+                        <option value="Comisionista">Comisionista</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Comentarios / Seguimiento</label>
+                    <textarea id="comentarios" class="form-control" rows="1"></textarea>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success">Guardar Lead</button>
+                    <button type="button" onclick="descargarReporte()" class="btn btn-secondary float-end">Descargar Reporte (CSV)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-dark text-white">Listado de Clientes</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Celular</th>
+                        <th>Email</th>
+                        <th>Origen</th>
+                        <th>Comentarios</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaLeads">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+  const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbwNcydeoUCSrxpc-oMCCUCcKJP6nLaPVIuJo1kTYET1a_4q3BBrSZRHYWQEt84Pi-1y/exec"
+const leadForm = document.getElementById('leadForm');
+const tablaLeads = document.getElementById('tablaLeads');
+
+// Cargar datos desde Google Sheets al iniciar
+async function cargarLeads() {
+    const response = await fetch(URL_GOOGLE_SCRIPT);
+    const leads = await response.json();
+    renderizarTabla(leads);
+}
+
+function renderizarTabla(leads) {
+    tablaLeads.innerHTML = '';
+    leads.forEach((lead, index) => {
+        // Limpiamos el número de celular (quitamos espacios o guiones si los hubiera)
+        const celularLimpio = lead.celular.toString().replace(/\D/g, '');
+        
+        // Creamos el mensaje predefinido (opcional)
+        const mensaje = encodeURIComponent(`Hola ${lead.nombre}, nos contactamos de la empresa para conversar sobre su consulta.`);
+        
+        // El enlace final de WhatsApp
+        const urlWhatsapp = `https://wa.me/${celularLimpio}?text=${mensaje}`;
+
+        tablaLeads.innerHTML += `
+            <tr>
+                <td>${lead.nombre}</td>
+                <td>${lead.celular}</td>
+                <td>${lead.email}</td>
+                <td><span class="badge ${lead.origen === 'Genuino' ? 'bg-info' : 'bg-warning'} text-dark">${lead.origen}</span></td>
+                <td><small>${lead.comentarios}</small></td>
+                <td>
+                    <a href="${urlWhatsapp}" target="_blank" class="btn btn-success btn-sm" title="Contactar por WhatsApp">
+                        <i class="bi bi-whatsapp"></i> 💬 WhatsApp
+                    </a>
+                </td>
+            </tr>`;
+    });
+}
+
+// Enviar datos a Google Sheets
+leadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; // Evitar doble clic
+
+    const datos = {
+        nombre: document.getElementById('nombre').value,
+        celular: document.getElementById('celular').value,
+        email: document.getElementById('email').value,
+        origen: document.getElementById('origen').value,
+        comentarios: document.getElementById('comentarios').value
+    };
+
+    await fetch(URL_GOOGLE_SCRIPT, {
+        method: 'POST',
+        mode: 'no-cors', // Necesario para Google Script
+        body: JSON.stringify(datos)
+    });
+
+    alert("¡Lead guardado con éxito!");
+    leadForm.reset();
+    btn.disabled = false;
+    cargarLeads();
+});
+
+// El botón de reporte seguirá funcionando igual, 
+// pero descargará lo que esté cargado en ese momento en la tabla.
+
+cargarLeads();
+</script>
+
+</body>
+</html>
