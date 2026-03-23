@@ -109,14 +109,41 @@
     }
 
     function actualizarDetalleComis() {
-        const nombreSel = selectComis.value;
-        const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSel);
-        const infoDiv = document.getElementById('detalleComis');
-        if (comi) {
-            infoDiv.innerHTML = `<strong>WhatsApp:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo}`;
+    const nombreSel = document.getElementById('selectComis').value;
+    const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSel);
+    const infoDiv = document.getElementById('detalleComis');
+    
+    if (comi) {
+        // Calcular Antigüedad
+        let textoAntiguedad = "Reciente";
+        if (comi.fechaAlta && comi.fechaAlta !== "-") {
+            // Convertimos la fecha del Excel a objeto de fecha de JS
+            const fechaInicio = new Date(comi.fechaAlta);
+            const hoy = new Date();
+            
+            // Calculamos la diferencia en milisegundos y pasamos a días
+            const diferenciaMilisegundos = hoy - fechaInicio;
+            const dias = Math.floor(diferenciaMilisegundos / (1000 * 60 * 60 * 24));
+            
+            if (dias > 365) {
+                textoAntiguedad = Math.floor(dias / 365) + " año(s)";
+            } else if (dias > 30) {
+                textoAntiguedad = Math.floor(dias / 30) + " mes(es)";
+            } else {
+                textoAntiguedad = dias + " día(s)";
+            }
         }
-    }
 
+        infoDiv.innerHTML = `
+            <div class="row">
+                <div class="col-6"><strong>WhatsApp:</strong> ${comi.celular}</div>
+                <div class="col-6 text-end"><strong>Antigüedad:</strong> <span class="badge bg-secondary">${textoAntiguedad}</span></div>
+                <div class="col-12 mt-1"><strong>Acuerdo:</strong> <span class="text-success">${comi.acuerdo}</span></div>
+                <div class="col-12 small text-muted">Fecha de alta: ${comi.fechaAlta}</div>
+            </div>
+        `;
+    }
+}
     // --- COMUNICACIÓN CON DRIVE ---
     async function cargarTodo() {
         try {
