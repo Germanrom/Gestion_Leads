@@ -128,31 +128,54 @@ function renderizarTabla(leads) {
 }
 
 // Enviar datos a Google Sheets
+// --- BLOQUE DE ENVÍO DE FORMULARIO ---
 leadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = e.target.querySelector('button');
-    btn.disabled = true; // Evitar doble clic
+    e.preventDefault(); // Evita que la página se recargue
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true; // Desactivamos el botón para evitar doble envío
+    btn.innerText = "Guardando...";
 
+    // 1. DETERMINAR EL ORIGEN:
+    // Si eligió 'Genuino', guardamos esa palabra.
+    // Si eligió 'Comisionista', tomamos el nombre del segundo desplegable.
+    let origenFinal = document.getElementById('origen').value;
+    
+    if (origenFinal === 'Comisionista') {
+        const nombreComis = document.getElementById('selectComis').value;
+        origenFinal = "Comisionista: " + nombreComis;
+    }
+
+    // 2. CAPTURAR TODOS LOS DATOS:
     const datos = {
         nombre: document.getElementById('nombre').value,
         celular: document.getElementById('celular').value,
         email: document.getElementById('email').value,
-        origen: document.getElementById('origen').value,
+        origen: origenFinal, // Aquí usamos el origen que procesamos arriba
         comentarios: document.getElementById('comentarios').value
     };
 
-    await fetch(URL_GOOGLE_SCRIPT, {
-        method: 'POST',
-        mode: 'no-cors', // Necesario para Google Script
-        body: JSON.stringify(datos)
-    });
+    // 3. ENVIAR A GOOGLE DRIVE:
+    try {
+        await fetch(URL_GOOGLE_SCRIPT, {
+            method: 'POST',
+            mode: 'no-cors', // Importante para Google Apps Script
+            body: JSON.stringify(datos)
+        });
 
-    alert("¡Lead guardado con éxito!");
-    leadForm.reset();
-    btn.disabled = false;
-    cargarLeads();
+        alert("¡Lead guardado con éxito en el Drive compartido!");
+        leadForm.reset(); // Limpia el formulario
+        toggleComisionistas(); // Oculta el campo de comisionista si quedó abierto
+        cargarLeads();    // Refresca la tabla para ver el nuevo registro
+        
+    } catch (error) {
+        console.error("Error al guardar:", error);
+        alert("Hubo un error al conectar con Google Drive.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Guardar Lead";
+    }
 });
-
 
 let listaComisionistas = [];
 
