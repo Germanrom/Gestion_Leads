@@ -116,6 +116,10 @@
     const infoDiv = document.getElementById('detalleComis');
     
     if (comi) {
+        // Limpiamos la fecha de la misma forma (cortando en la T)
+        const fechaLimpia = (comi.fechaAlta && comi.fechaAlta.includes('T')) 
+            ? comi.fechaAlta.split('T')[0] 
+            : comi.fechaAlta;
         // Calcular Antigüedad
         let textoAntiguedad = "Reciente";
         if (comi.fechaAlta && comi.fechaAlta !== "-") {
@@ -135,13 +139,12 @@
                 textoAntiguedad = dias + " día(s)";
             }
         }
-
         infoDiv.innerHTML = `
             <div class="row">
                 <div class="col-6"><strong>WhatsApp:</strong> ${comi.celular}</div>
                 <div class="col-6 text-end"><strong>Antigüedad:</strong> <span class="badge bg-secondary">${textoAntiguedad}</span></div>
                 <div class="col-12 mt-1"><strong>Acuerdo:</strong> <span class="text-success">${comi.acuerdo}</span></div>
-                <div class="col-12 small text-muted">Fecha de alta: ${comi.fechaAlta}</div>
+                <div class="col-12 small text-muted">Fecha de alta: ${fechaLimpia}</div>
             </div>
         `;
     }
@@ -192,7 +195,11 @@
         
         // Verificamos que las fechas existan, si no, ponemos "-"
         const altaLead = l.fAltaLead || '-';
-        const altaComi = l.fAltaComi || '-';
+        //const altaComi = l.fAltaComi || '-';
+        // Cortamos la fecha del alta del comisionista para que sea limpia
+        const altaComi = (l.fAltaComi && l.fAltaComi.includes('T')) 
+        ? l.fAltaComi.split('T')[0] 
+        : l.fAltaComi;
         const ultCont = l.fUltContacto || '-';
 
         tablaLeads.innerHTML += `
