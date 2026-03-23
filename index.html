@@ -207,6 +207,7 @@
             <tr>
                 <td>
                     <strong>${l.nombre}</strong><br>
+                    <small class="text-primary">${l.email || 'Sin email'}</small><br>
                     <small class="text-muted">Registrado: ${altaLead}</small>
                 </td>
                 <td>${l.celular}</td>
@@ -219,7 +220,10 @@
                     <small class="text-secondary">${l.comentarios || ''}</small>
                 </td>
                 <td>
-                    <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                    <div class="d-flex gap-1">
+                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                        <a href="mailto:${l.email}" class="btn btn-outline-primary btn-sm" title="Enviar Email">✉️</a>
+                    </div>
                 </td>
             </tr>`;
     });
