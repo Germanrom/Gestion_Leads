@@ -91,6 +91,7 @@
 <script>
     // --- CONFIGURACIÓN ---
     const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxcSq2QN3xUwYIwtG-JLbSOVUGJlZJS-JPEH8BHnoj63UqJpv6ypUyMKiweL_P9TKdU/exec";
+        //v5:"https://script.google.com/macros/s/AKfycbxcSq2QN3xUwYIwtG-JLbSOVUGJlZJS-JPEH8BHnoj63UqJpv6ypUyMKiweL_P9TKdU/exec";
         //v4: "https://script.google.com/macros/s/AKfycbznrurS7qX8dsWOnxMJaYxkmzekwV-trJK55rBiAUqA2bHrrKL4tVM91ROqEi05brCo/exec;" 
         //v3: "https://script.google.com/macros/s/AKfycbzTL6LFGSP08r-AnwT4dizlpL6uyso-CLh3fiB3bVVo3sc7l_C4ToPwXty53cIA0h6w/exec";
         //v2:"https://script.google.com/macros/s/AKfycbyH5gx57uY2obve6zEi7wvacJe014zRi0SYvQSCuctNm0LWED51yxIQE9JvwuyBjygm/exec"; // <--- PEGA TU URL AQUÍ
@@ -146,28 +147,36 @@
     }
 }
     // --- COMUNICACIÓN CON DRIVE ---
-    async function cargarTodo() {
-        try {
-            const response = await fetch(URL_GOOGLE_SCRIPT);
-            const data = await response.json();
-            
-            // Guardar datos en memoria
-            listaLeads = data.leads;
-            listaComisionistas = data.comisionistas;
+   async function cargarTodo() {
+    try {
+        // Añadimos redireccionamiento manual para evitar el error de Fetch
+        const response = await fetch(URL_GOOGLE_SCRIPT, {
+            method: 'GET',
+            redirect: 'follow' // Esto le dice al navegador que siga la ruta de Google
+        });
+        
+        if (!response.ok) throw new Error('Error en la respuesta de red');
+        
+        const data = await response.json();
+        
+        listaLeads = data.leads;
+        listaComisionistas = data.comisionistas;
 
-            // Llenar el select de comisionistas
-            selectComis.innerHTML = listaComisionistas.map(c => 
-                `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
-            ).join('');
+        // Llenar el select de comisionistas
+        const selectComis = document.getElementById('selectComis');
+        selectComis.innerHTML = listaComisionistas.map(c => 
+            `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
+        ).join('');
 
-            renderizarTabla(listaLeads);
-            if(listaComisionistas.length > 0) actualizarDetalleComis();
+        renderizarTabla(listaLeads);
+        if(listaComisionistas.length > 0) actualizarDetalleComis();
 
-        } catch (error) {
-            console.error("Error cargando datos:", error);
-            tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al conectar con la base de datos</td></tr>';
-        }
+    } catch (error) {
+        console.error("Error detallado:", error);
+        document.getElementById('tablaLeads').innerHTML = 
+            '<tr><td colspan="5" class="text-center text-danger">No se pudo conectar. Verifica la URL de Google Script.</td></tr>';
     }
+}
 
     function renderizarTabla(leads) {
     tablaLeads.innerHTML = '';
