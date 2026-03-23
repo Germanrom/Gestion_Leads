@@ -90,7 +90,8 @@
 
 <script>
     // --- CONFIGURACIÓN ---
-    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzTL6LFGSP08r-AnwT4dizlpL6uyso-CLh3fiB3bVVo3sc7l_C4ToPwXty53cIA0h6w/exec";
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbznrurS7qX8dsWOnxMJaYxkmzekwV-trJK55rBiAUqA2bHrrKL4tVM91ROqEi05brCo/exec;" 
+        //v3: "https://script.google.com/macros/s/AKfycbzTL6LFGSP08r-AnwT4dizlpL6uyso-CLh3fiB3bVVo3sc7l_C4ToPwXty53cIA0h6w/exec";
         //v2:"https://script.google.com/macros/s/AKfycbyH5gx57uY2obve6zEi7wvacJe014zRi0SYvQSCuctNm0LWED51yxIQE9JvwuyBjygm/exec"; // <--- PEGA TU URL AQUÍ
     
     const leadForm = document.getElementById('leadForm');
@@ -140,32 +141,44 @@
         }
     }
 
-    function renderizarTabla(leads) 
-    {
-        tablaLeads.innerHTML = '';
-        leads.forEach(l => 
-            {
-                tablaLeads.innerHTML += `
-                <tr>
-                    <td>
-                        <strong>${l.nombre}</strong><br>
-                        <small class="text-muted">Alta: ${l.fAltaLead || '-'}</small>
-                    </td>
-                    <td>${l.celular}</td>
-                    <td>
-                        <span class="badge ${l.origen.includes('Comi') ? 'bg-warning' : 'bg-info'} text-dark">${l.origen}</span><br>
-                        <small>Alta Comi: ${l.fAltaComi || '-'}</small>
-                    </td>
-                    <td>
-                        <small>Contacto: ${l.fUltContacto || '-'}</small><br>
-                        <small>${l.comentarios}</small>
-                    </td>
-                    <td>
-                        <a href="https://wa.me/${l.celular.toString().replace(/\D/g, '')}" target="_blank" class="btn btn-success btn-sm">💬</a>
-                    </td>
-                </tr>`;
-        });
+    function renderizarTabla(leads) {
+    tablaLeads.innerHTML = '';
+    
+    if (!leads || leads.length === 0) {
+        tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center">No hay datos</td></tr>';
+        return;
     }
+
+    leads.forEach(l => {
+        // Limpiamos el celular para el link de WhatsApp
+        const cel = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
+        
+        // Verificamos que las fechas existan, si no, ponemos "-"
+        const altaLead = l.fAltaLead || '-';
+        const altaComi = l.fAltaComi || '-';
+        const ultCont = l.fUltContacto || '-';
+
+        tablaLeads.innerHTML += `
+            <tr>
+                <td>
+                    <strong>${l.nombre}</strong><br>
+                    <small class="text-muted">Registrado: ${altaLead}</small>
+                </td>
+                <td>${l.celular}</td>
+                <td>
+                    <span class="badge ${l.origen.includes('Comi') ? 'bg-warning text-dark' : 'bg-info text-dark'}">${l.origen}</span><br>
+                    <small class="text-muted">Socio desde: ${altaComi}</small>
+                </td>
+                <td>
+                    <div class="fw-bold" style="font-size: 0.85rem;">Últ. Contacto: ${ultCont}</div>
+                    <small class="text-secondary">${l.comentarios || ''}</small>
+                </td>
+                <td>
+                    <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                </td>
+            </tr>`;
+    });
+}
 
     // --- GUARDADO ---
     leadForm.addEventListener('submit', async (e) => 
