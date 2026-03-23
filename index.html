@@ -183,45 +183,45 @@
 }
 
     function renderizarTabla(leads) {
+    const tablaLeads = document.getElementById('tablaLeads');
     tablaLeads.innerHTML = '';
     
     if (!leads || leads.length === 0) {
-        tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center">No hay datos</td></tr>';
+        tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads registrados aún</td></tr>';
         return;
     }
 
     leads.forEach(l => {
-        // Limpiamos el celular para el link de WhatsApp
+        // 1. Limpieza de Celular para WhatsApp
         const cel = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
         
-        // Verificamos que las fechas existan, si no, ponemos "-"
-        const altaLead = l.fAltaLead || '-';
-        //const altaComi = l.fAltaComi || '-';
-        // Cortamos la fecha del alta del comisionista para que sea limpia
-        const altaComi = (l.fAltaComi && l.fAltaComi.includes('T')) 
-        ? l.fAltaComi.split('T')[0] 
-        : l.fAltaComi;
-        const ultCont = l.fUltContacto || '-';
+        // 2. Limpieza de Fechas (cortamos en la 'T' para evitar el formato largo)
+        const altaLead = (l.fAltaLead && l.fAltaLead.includes('T')) ? l.fAltaLead.split('T')[0] : (l.fAltaLead || '-');
+        const altaComi = (l.fAltaComi && l.fAltaComi.includes('T')) ? l.fAltaComi.split('T')[0] : (l.fAltaComi || '-');
+        const ultCont = (l.fUltContacto && l.fUltContacto.includes('T')) ? l.fUltContacto.split('T')[0] : (l.fUltContacto || '-');
+
+        // 3. Definición de colores para las etiquetas (Badges)
+        const badgeClass = l.origen.includes('Comisionista') ? 'bg-warning text-dark' : 'bg-info text-dark';
 
         tablaLeads.innerHTML += `
             <tr>
                 <td>
                     <strong>${l.nombre}</strong><br>
                     <small class="text-primary">${l.email || 'Sin email'}</small><br>
-                    <small class="text-muted">Registrado: ${altaLead}</small>
+                    <small class="text-muted" style="font-size: 0.75rem;">Registrado: ${altaLead}</small>
                 </td>
                 <td>${l.celular}</td>
                 <td>
-                    <span class="badge ${l.origen.includes('Comi') ? 'bg-warning text-dark' : 'bg-info text-dark'}">${l.origen}</span><br>
-                    <small class="text-muted">Socio desde: ${altaComi}</small>
+                    <span class="badge ${badgeClass}">${l.origen}</span><br>
+                    <small class="text-muted" style="font-size: 0.75rem;">Socio desde: ${altaComi}</small>
                 </td>
                 <td>
                     <div class="fw-bold" style="font-size: 0.85rem;">Últ. Contacto: ${ultCont}</div>
-                    <small class="text-secondary">${l.comentarios || ''}</small>
+                    <small class="text-secondary">${l.comentarios || '-'}</small>
                 </td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm" title="WhatsApp">💬</a>
                         <a href="mailto:${l.email}" class="btn btn-outline-primary btn-sm" title="Enviar Email">✉️</a>
                     </div>
                 </td>
