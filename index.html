@@ -42,7 +42,10 @@
                         <option value="Comisionista">Comisionista</option>
                     </select>
                 </div>
-
+                <div class="col-md-4">
+                    <label class="form-label">Fecha de Último Contacto</label>
+                    <input type="date" id="fUltContacto" class="form-control">
+                </div>
                 <div class="col-md-8" id="divComisionistas" style="display: none;">
                     <label class="form-label text-danger">Seleccionar Comisionista</label>
                     <select id="selectComis" class="form-select"></select>
@@ -136,49 +139,63 @@
         }
     }
 
-    function renderizarTabla(leads) {
+    function renderizarTabla(leads) 
+    {
         tablaLeads.innerHTML = '';
-        if (leads.length === 0) {
-            tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads registrados aún</td></tr>';
-            return;
-        }
-
-        leads.forEach(l => {
-            const cel = l.celular.toString().replace(/\D/g, '');
-            const badgeClass = l.origen.includes('Comisionista') ? 'badge-comi' : 'badge-genuino';
-            
-            tablaLeads.innerHTML += `
+        leads.forEach(l => 
+            {
+                tablaLeads.innerHTML += `
                 <tr>
-                    <td><strong>${l.nombre}</strong><br><small class="text-muted">${l.email}</small></td>
-                    <td>${l.celular}</td>
-                    <td><span class="badge ${badgeClass}">${l.origen}</span></td>
-                    <td><small>${l.comentarios || '-'}</small></td>
                     <td>
-                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬 Chat</a>
+                        <strong>${l.nombre}</strong><br>
+                        <small class="text-muted">Alta: ${l.fAltaLead || '-'}</small>
+                    </td>
+                    <td>${l.celular}</td>
+                    <td>
+                        <span class="badge ${l.origen.includes('Comi') ? 'bg-warning' : 'bg-info'} text-dark">${l.origen}</span><br>
+                        <small>Alta Comi: ${l.fAltaComi || '-'}</small>
+                    </td>
+                    <td>
+                        <small>Contacto: ${l.fUltContacto || '-'}</small><br>
+                        <small>${l.comentarios}</small>
+                    </td>
+                    <td>
+                        <a href="https://wa.me/${l.celular.toString().replace(/\D/g, '')}" target="_blank" class="btn btn-success btn-sm">💬</a>
                     </td>
                 </tr>`;
         });
     }
 
     // --- GUARDADO ---
-    leadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('btnGuardar');
-        btn.disabled = true;
-        btn.innerText = "Enviando...";
-
-        let origenFinal = document.getElementById('origen').value;
-        if (origenFinal === 'Comisionista') {
-            origenFinal = "Comisionista: " + selectComis.value;
-        }
-
-        const datos = {
-            nombre: document.getElementById('nombre').value,
-            celular: document.getElementById('celular').value,
-            email: document.getElementById('email').value,
-            origen: origenFinal,
-            comentarios: document.getElementById('comentarios').value
-        };
+    leadForm.addEventListener('submit', async (e) => 
+        {
+            e.preventDefault();
+           // ... dentro del leadForm.addEventListener('submit' ...
+            const origenBase = document.getElementById('origen').value;
+            let origenFinal = origenBase;
+            let fechaAltaComisionista = "-"; // Por defecto vacío
+            
+            if (origenBase === 'Comisionista') 
+            {
+                const nombreSel = document.getElementById('selectComis').value;
+                origenFinal = "Comisionista: " + nombreSel;
+                
+                // Buscamos la fecha de alta de ese comisionista en nuestra lista cargada
+                const comiData = listaComisionistas.find(c => c.nombreCompleto === nombreSel);
+                if (comiData) fechaAltaComisionista = comiData.fechaAlta;
+            }
+            
+            const datos = 
+            {
+                nombre: document.getElementById('nombre').value,
+                celular: document.getElementById('celular').value,
+                email: document.getElementById('email').value,
+                origen: origenFinal,
+                comentarios: document.getElementById('comentarios').value,
+                fAltaComi: fechaAltaComisionista, // Traída del Excel de comisionistas
+                fUltContacto: document.getElementById('fUltContacto').value // Elegida en el calendario
+            };
+// ... seguir con el fetch ...
 
         try {
             await fetch(URL_GOOGLE_SCRIPT, {
