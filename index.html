@@ -6,178 +6,170 @@
     <title>Gestión de Leads - Mi Empresa</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .container { margin-top: 30px; }
-        .card { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        body { background-color: #f4f7f6; }
+        .container { margin-top: 20px; max-width: 1000px; }
+        .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
+        .badge-genuino { background-color: #0dcaf0; color: #000; }
+        .badge-comi { background-color: #ffc107; color: #000; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 class="text-center mb-4">Sistema de Gestión de Leads</h2>
+    <h2 class="text-center mb-4 text-primary">Panel de Gestión de Leads</h2>
 
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">Registrar Nuevo Cliente / Lead</div>
+        <div class="card-header bg-primary text-white">Registrar Nuevo Lead</div>
         <div class="card-body">
             <form id="leadForm" class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Nombre / Razón Social</label>
-                    <input type="text" id="nombre" class="form-control" required>
+                    <label class="form-label font-weight-bold">Nombre / Razón Social</label>
+                    <input type="text" id="nombre" class="form-control" placeholder="Ej: Juan Pérez" required>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Celular</label>
-                    <input type="tel" id="celular" class="form-control" required>
+                    <input type="tel" id="celular" class="form-control" placeholder="549381..." required>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Email</label>
-                    <input type="email" id="email" class="form-control" required>
+                    <input type="email" id="email" class="form-control" placeholder="correo@ejemplo.com" required>
                 </div>
+                
                 <div class="col-md-4">
-                    <!--<label class="form-label">Origen</label>
-                    <select id="origen" class="form-select">
-                        //<option value="Genuino">Genuino de Empresa</option>
-                        //<option value="Comisionista">Comisionista</option>
-                    </select>-->
-                    <!--<div class="col-md-4">-->
-                     <label class="form-label">Origen</label>
-                     <select id="origen" class="form-select" onchange="toggleComisionistas()">
+                    <label class="form-label">Origen del Lead</label>
+                    <select id="origen" class="form-select" onchange="toggleComisionistas()">
                         <option value="Genuino">Genuino de Empresa</option>
                         <option value="Comisionista">Comisionista</option>
                     </select>
                 </div>
-                <div class="col-md-8" id="divComisionistas" style="display: none;">
-                    <label class="form-label">Seleccionar Comisionista (Editable en Excel)</label>
-                    <select id="selectComis" class="form-select">
-                    </select>
-                    <div id="detalleComis" class="form-text text-primary font-italic"></div>
-                    </div>
 
+                <div class="col-md-8" id="divComisionistas" style="display: none;">
+                    <label class="form-label text-danger">Seleccionar Comisionista</label>
+                    <select id="selectComis" class="form-select"></select>
+                    <div id="detalleComis" class="mt-2 p-2 bg-light border rounded small text-muted"></div>
                 </div>
-                <div class="col-md-8">
-                    <label class="form-label">Comentarios / Seguimiento</label>
-                    <textarea id="comentarios" class="form-control" rows="1"></textarea>
-                </div>
+
                 <div class="col-12">
-                    <button type="submit" class="btn btn-success">Guardar Lead</button>
-                    <button type="button" onclick="descargarReporte()" class="btn btn-secondary float-end">Descargar Reporte (CSV)</button>
+                    <label class="form-label">Comentarios / Seguimiento</label>
+                    <textarea id="comentarios" class="form-control" rows="2" placeholder="Notas de la llamada..."></textarea>
+                </div>
+                <div class="col-12 mt-4">
+                    <button type="submit" id="btnGuardar" class="btn btn-primary px-5">Guardar Lead</button>
+                    <button type="button" onclick="descargarReporte()" class="btn btn-outline-secondary float-end">Descargar Reporte</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header bg-dark text-white">Listado de Clientes</div>
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            Listado Compartido
+            <button class="btn btn-sm btn-outline-light" onclick="cargarTodo()">🔄 Actualizar</button>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>Nombre</th>
                         <th>Celular</th>
-                        <th>Email</th>
                         <th>Origen</th>
                         <th>Comentarios</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody id="tablaLeads">
-                    </tbody>
+                    <tr><td colspan="5" class="text-center">Cargando datos...</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
 
 <script>
-    // 1. CONFIGURACIÓN INICIAL
-    const URL_GOOGLE_SCRIPT = "TU_URL_DE_EXEC_AQUI"; // REEMPLAZA CON TU URL REAL
+    // --- CONFIGURACIÓN ---
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbyH5gx57uY2obve6zEi7wvacJe014zRi0SYvQSCuctNm0LWED51yxIQE9JvwuyBjygm/exec"; // <--- PEGA TU URL AQUÍ
+    
     const leadForm = document.getElementById('leadForm');
     const tablaLeads = document.getElementById('tablaLeads');
+    const selectComis = document.getElementById('selectComis');
     let listaComisionistas = [];
+    let listaLeads = [];
 
-    // 2. MOSTRAR/OCULTAR CAMPOS DE COMISIONISTA
+    // --- FUNCIONES DE INTERFAZ ---
     function toggleComisionistas() {
         const origen = document.getElementById('origen').value;
         const div = document.getElementById('divComisionistas');
-        if (div) {
-            div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
-            if (origen === 'Comisionista') actualizarDetalleComis();
-        }
+        div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
+        if (origen === 'Comisionista') actualizarDetalleComis();
     }
 
-    // 3. ACTUALIZAR TEXTO DE ACUERDO Y CONTACTO
     function actualizarDetalleComis() {
-        const select = document.getElementById('selectComis');
+        const nombreSel = selectComis.value;
+        const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSel);
         const infoDiv = document.getElementById('detalleComis');
-        if (!select || !infoDiv) return;
-
-        const nombreSeleccionado = select.value;
-        const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSeleccionado);
-        
         if (comi) {
-            infoDiv.innerHTML = `
-                <strong>Contacto:</strong> ${comi.celular} | ${comi.email}<br>
-                <strong>Acuerdo:</strong> <span class="text-success">${comi.acuerdo}</span>
-            `;
-        } else {
-            infoDiv.innerHTML = "Seleccione un comisionista de la lista.";
+            infoDiv.innerHTML = `<strong>WhatsApp:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo}`;
         }
     }
 
-    // 4. CARGAR DATOS DESDE GOOGLE DRIVE
+    // --- COMUNICACIÓN CON DRIVE ---
     async function cargarTodo() {
         try {
             const response = await fetch(URL_GOOGLE_SCRIPT);
             const data = await response.json();
             
-            // Cargar Comisionistas en el Select
+            // Guardar datos en memoria
+            listaLeads = data.leads;
             listaComisionistas = data.comisionistas;
-            const selectComis = document.getElementById('selectComis');
-            if (selectComis && listaComisionistas.length > 0) {
-                selectComis.innerHTML = listaComisionistas.map(c => 
-                    `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
-                ).join('');
-                actualizarDetalleComis();
-            }
 
-            // Renderizar Tabla de Leads
-            renderizarTabla(data.leads);
+            // Llenar el select de comisionistas
+            selectComis.innerHTML = listaComisionistas.map(c => 
+                `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
+            ).join('');
+
+            renderizarTabla(listaLeads);
+            if(listaComisionistas.length > 0) actualizarDetalleComis();
+
         } catch (error) {
-            console.error("Error al cargar datos:", error);
+            console.error("Error cargando datos:", error);
+            tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al conectar con la base de datos</td></tr>';
         }
     }
 
-    // 5. RENDERIZAR TABLA CON BOTÓN WHATSAPP
     function renderizarTabla(leads) {
         tablaLeads.innerHTML = '';
-        leads.forEach(lead => {
-            const celularLimpio = lead.celular.toString().replace(/\D/g, '');
-            const urlWa = `https://wa.me/${celularLimpio}`;
+        if (leads.length === 0) {
+            tablaLeads.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads registrados aún</td></tr>';
+            return;
+        }
 
+        leads.forEach(l => {
+            const cel = l.celular.toString().replace(/\D/g, '');
+            const badgeClass = l.origen.includes('Comisionista') ? 'badge-comi' : 'badge-genuino';
+            
             tablaLeads.innerHTML += `
                 <tr>
-                    <td>${lead.nombre}</td>
-                    <td>${lead.celular}</td>
-                    <td>${lead.email}</td>
-                    <td><span class="badge bg-info text-dark">${lead.origen}</span></td>
-                    <td><small>${lead.comentarios}</small></td>
+                    <td><strong>${l.nombre}</strong><br><small class="text-muted">${l.email}</small></td>
+                    <td>${l.celular}</td>
+                    <td><span class="badge ${badgeClass}">${l.origen}</span></td>
+                    <td><small>${l.comentarios || '-'}</small></td>
                     <td>
-                        <a href="${urlWa}" target="_blank" class="btn btn-success btn-sm">💬 WhatsApp</a>
+                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬 Chat</a>
                     </td>
                 </tr>`;
         });
     }
 
-    // 6. EVENTO GUARDAR (SUBMIT) - EL CORAZÓN DE LA APP
+    // --- GUARDADO ---
     leadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const btn = e.target.querySelector('button[type="submit"]');
+        const btn = document.getElementById('btnGuardar');
         btn.disabled = true;
-        btn.innerText = "Guardando...";
+        btn.innerText = "Enviando...";
 
-        // Procesar Origen
         let origenFinal = document.getElementById('origen').value;
         if (origenFinal === 'Comisionista') {
-            origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
+            origenFinal = "Comisionista: " + selectComis.value;
         }
 
         const datos = {
@@ -189,31 +181,51 @@
         };
 
         try {
-            // Enviamos a Google
             await fetch(URL_GOOGLE_SCRIPT, {
                 method: 'POST',
                 mode: 'no-cors',
                 body: JSON.stringify(datos)
             });
 
-            alert("¡Lead guardado con éxito!");
+            alert("¡Lead guardado correctamente!");
             leadForm.reset();
             toggleComisionistas();
-            cargarTodo(); // Recargamos la tabla para ver el nuevo lead
+            cargarTodo();
         } catch (err) {
-            alert("Error al guardar. Revisa la consola.");
-            console.error(err);
+            alert("Error al guardar.");
         } finally {
             btn.disabled = false;
             btn.innerText = "Guardar Lead";
         }
     });
 
-    // 7. INICIO AUTOMÁTICO
+    function descargarReporte() {
+        let csv = "Nombre,Celular,Email,Origen,Comentarios\n";
+        listaLeads.forEach(l => {
+            csv += `"${l.nombre}","${l.celular}","${l.email}","${l.origen}","${l.comentarios}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", "leads_mi_empresa.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Inicio
     document.addEventListener('DOMContentLoaded', () => {
         cargarTodo();
-        // Escuchar cambios en el select de comisionistas
-        document.getElementById('selectComis').addEventListener('change', actualizarDetalleComis);
+        selectComis.addEventListener('change', actualizarDetalleComis);
+        
+        // --- LINK MÁGICO ---
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('nombre')) document.getElementById('nombre').value = params.get('nombre');
+        if(params.has('celular')) document.getElementById('celular').value = params.get('celular');
+        if(params.has('origen')) {
+            document.getElementById('origen').value = params.get('origen');
+            toggleComisionistas();
+        }
     });
 </script>
 
