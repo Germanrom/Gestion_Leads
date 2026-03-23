@@ -87,155 +87,134 @@
 </div>
 
 <script>
-  const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbwKNqp7bzwA7Qqyfd_3IhjcmbFkYemkGhbxryjU0auKVM6z9dMoZOZWctwjd65nC3_4/exec"
-                           //https://script.google.com/macros/s/AKfycbwBfiE_K5ShJTQu3kdGXgCwxptHaNS8UqSChgS45OH46epYjJrdQrjbj-1j61poHL6S/exec"
-                           //https://script.google.com/macros/s/AKfycbwNcydeoUCSrxpc-oMCCUCcKJP6nLaPVIuJo1kTYET1a_4q3BBrSZRHYWQEt84Pi-1y/exec - url vieja de app script
-const leadForm = document.getElementById('leadForm');
-const tablaLeads = document.getElementById('tablaLeads');
+    // 1. CONFIGURACIÓN INICIAL
+    const URL_GOOGLE_SCRIPT = "TU_URL_DE_EXEC_AQUI"; // REEMPLAZA CON TU URL REAL
+    const leadForm = document.getElementById('leadForm');
+    const tablaLeads = document.getElementById('tablaLeads');
+    let listaComisionistas = [];
 
-// Cargar datos desde Google Sheets al iniciar
-async function cargarLeads() {
-    const response = await fetch(URL_GOOGLE_SCRIPT);
-    const leads = await response.json();
-    renderizarTabla(leads);
-}
-
-function renderizarTabla(leads) {
-    tablaLeads.innerHTML = '';
-    leads.forEach((lead, index) => {
-        // Limpiamos el número de celular (quitamos espacios o guiones si los hubiera)
-        const celularLimpio = lead.celular.toString().replace(/\D/g, '');
-        
-        // Creamos el mensaje predefinido (opcional)
-        const mensaje = encodeURIComponent(`Hola ${lead.nombre}, nos contactamos de la empresa para conversar sobre su consulta.`);
-        
-        // El enlace final de WhatsApp
-        const urlWhatsapp = `https://wa.me/${celularLimpio}?text=${mensaje}`;
-
-        tablaLeads.innerHTML += `
-            <tr>
-                <td>${lead.nombre}</td>
-                <td>${lead.celular}</td>
-                <td>${lead.email}</td>
-                <td><span class="badge ${lead.origen === 'Genuino' ? 'bg-info' : 'bg-warning'} text-dark">${lead.origen}</span></td>
-                <td><small>${lead.comentarios}</small></td>
-                <td>
-                    <a href="${urlWhatsapp}" target="_blank" class="btn btn-success btn-sm" title="Contactar por WhatsApp">
-                        <i class="bi bi-whatsapp"></i> 💬 WhatsApp
-                    </a>
-                </td>
-            </tr>`;
-    });
-}
-
-// Enviar datos a Google Sheets
-// --- BLOQUE DE ENVÍO DE FORMULARIO ---
-leadForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // Evita que la página se recargue
-    
-    const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true; // Desactivamos el botón para evitar doble envío
-    btn.innerText = "Guardando...";
-
-    // 1. DETERMINAR EL ORIGEN:
-    // Si eligió 'Genuino', guardamos esa palabra.
-    // Si eligió 'Comisionista', tomamos el nombre del segundo desplegable.
-    let origenFinal = document.getElementById('origen').value;
-    
-    if (origenFinal === 'Comisionista') {
-        const nombreComis = document.getElementById('selectComis').value;
-        origenFinal = "Comisionista: " + nombreComis;
+    // 2. MOSTRAR/OCULTAR CAMPOS DE COMISIONISTA
+    function toggleComisionistas() {
+        const origen = document.getElementById('origen').value;
+        const div = document.getElementById('divComisionistas');
+        if (div) {
+            div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
+            if (origen === 'Comisionista') actualizarDetalleComis();
+        }
     }
 
-    // 2. CAPTURAR TODOS LOS DATOS:
-    const datos = {
-        nombre: document.getElementById('nombre').value,
-        celular: document.getElementById('celular').value,
-        email: document.getElementById('email').value,
-        origen: origenFinal, // Aquí usamos el origen que procesamos arriba
-        comentarios: document.getElementById('comentarios').value
-    };
+    // 3. ACTUALIZAR TEXTO DE ACUERDO Y CONTACTO
+    function actualizarDetalleComis() {
+        const select = document.getElementById('selectComis');
+        const infoDiv = document.getElementById('detalleComis');
+        if (!select || !infoDiv) return;
 
-    // 3. ENVIAR A GOOGLE DRIVE:
-    try {
-        await fetch(URL_GOOGLE_SCRIPT, {
-            method: 'POST',
-            mode: 'no-cors', // Importante para Google Apps Script
-            body: JSON.stringify(datos)
+        const nombreSeleccionado = select.value;
+        const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSeleccionado);
+        
+        if (comi) {
+            infoDiv.innerHTML = `
+                <strong>Contacto:</strong> ${comi.celular} | ${comi.email}<br>
+                <strong>Acuerdo:</strong> <span class="text-success">${comi.acuerdo}</span>
+            `;
+        } else {
+            infoDiv.innerHTML = "Seleccione un comisionista de la lista.";
+        }
+    }
+
+    // 4. CARGAR DATOS DESDE GOOGLE DRIVE
+    async function cargarTodo() {
+        try {
+            const response = await fetch(URL_GOOGLE_SCRIPT);
+            const data = await response.json();
+            
+            // Cargar Comisionistas en el Select
+            listaComisionistas = data.comisionistas;
+            const selectComis = document.getElementById('selectComis');
+            if (selectComis && listaComisionistas.length > 0) {
+                selectComis.innerHTML = listaComisionistas.map(c => 
+                    `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
+                ).join('');
+                actualizarDetalleComis();
+            }
+
+            // Renderizar Tabla de Leads
+            renderizarTabla(data.leads);
+        } catch (error) {
+            console.error("Error al cargar datos:", error);
+        }
+    }
+
+    // 5. RENDERIZAR TABLA CON BOTÓN WHATSAPP
+    function renderizarTabla(leads) {
+        tablaLeads.innerHTML = '';
+        leads.forEach(lead => {
+            const celularLimpio = lead.celular.toString().replace(/\D/g, '');
+            const urlWa = `https://wa.me/${celularLimpio}`;
+
+            tablaLeads.innerHTML += `
+                <tr>
+                    <td>${lead.nombre}</td>
+                    <td>${lead.celular}</td>
+                    <td>${lead.email}</td>
+                    <td><span class="badge bg-info text-dark">${lead.origen}</span></td>
+                    <td><small>${lead.comentarios}</small></td>
+                    <td>
+                        <a href="${urlWa}" target="_blank" class="btn btn-success btn-sm">💬 WhatsApp</a>
+                    </td>
+                </tr>`;
         });
+    }
 
-        alert("¡Lead guardado con éxito en el Drive compartido!");
-        leadForm.reset(); // Limpia el formulario
-        toggleComisionistas(); // Oculta el campo de comisionista si quedó abierto
-        cargarLeads();    // Refresca la tabla para ver el nuevo registro
+    // 6. EVENTO GUARDAR (SUBMIT) - EL CORAZÓN DE LA APP
+    leadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-    } catch (error) {
-        console.error("Error al guardar:", error);
-        alert("Hubo un error al conectar con Google Drive.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "Guardar Lead";
-    }
-});
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerText = "Guardando...";
 
-let listaComisionistas = [];
+        // Procesar Origen
+        let origenFinal = document.getElementById('origen').value;
+        if (origenFinal === 'Comisionista') {
+            origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
+        }
 
-// Función para mostrar/ocultar campos
-function toggleComisionistas() {
-    const origen = document.getElementById('origen').value;
-    const div = document.getElementById('divComisionistas');
-    div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
-    actualizarDetalleComis();
-}
+        const datos = {
+            nombre: document.getElementById('nombre').value,
+            celular: document.getElementById('celular').value,
+            email: document.getElementById('email').value,
+            origen: origenFinal,
+            comentarios: document.getElementById('comentarios').value
+        };
 
-// Al cambiar de comisionista, mostramos su acuerdo
-document.getElementById('selectComis').addEventListener('change', actualizarDetalleComis);
+        try {
+            // Enviamos a Google
+            await fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(datos)
+            });
 
-// Función para mostrar el detalle completo del comisionista seleccionado
-function actualizarDetalleComis() {
-    const nombreSeleccionado = document.getElementById('selectComis').value;
-    const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSeleccionado);
-    
-    const infoDiv = document.getElementById('detalleComis');
-    if (comi) {
-        infoDiv.innerHTML = `
-            <strong>Contacto:</strong> ${comi.celular} | ${comi.email}<br>
-            <strong>Acuerdo:</strong> <span class="text-success">${comi.acuerdo}</span>
-        `;
-    }
-}
+            alert("¡Lead guardado con éxito!");
+            leadForm.reset();
+            toggleComisionistas();
+            cargarTodo(); // Recargamos la tabla para ver el nuevo lead
+        } catch (err) {
+            alert("Error al guardar. Revisa la consola.");
+            console.error(err);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Guardar Lead";
+        }
+    });
 
-// Modificación en la carga inicial
-async function cargarLeads() {
-    const response = await fetch(URL_GOOGLE_SCRIPT);
-    const data = await response.json();
-    
-    listaComisionistas = data.comisionistas;
-    const select = document.getElementById('selectComis');
-    
-    // Cargamos el select con "Nombre Apellido"
-    select.innerHTML = listaComisionistas.map(c => 
-        `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
-    ).join('');
-    
-    // Escuchamos cambios para actualizar el texto de ayuda
-    select.addEventListener('change', actualizarDetalleComis);
-    
-    // Si ya hay comisionistas, mostramos el detalle del primero por defecto
-    if(listaComisionistas.length > 0) actualizarDetalleComis();
-
-    renderizarTabla(data.leads);
-}
-
-// Ajusta el guardado para que incluya al comisionista en el origen
-// En la parte del 'submit', cambia el campo origen por esto:
-const origenFinal = (document.getElementById('origen').value === 'Comisionista') 
-    ? "Comisionista: " + document.getElementById('selectComis').value 
-    : "Genuino";
-// El botón de reporte seguirá funcionando igual, 
-// pero descargará lo que esté cargado en ese momento en la tabla.
-
-cargarLeads();
+    // 7. INICIO AUTOMÁTICO
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarTodo();
+        // Escuchar cambios en el select de comisionistas
+        document.getElementById('selectComis').addEventListener('change', actualizarDetalleComis);
+    });
 </script>
 
 </body>
