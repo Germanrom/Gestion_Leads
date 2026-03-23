@@ -167,24 +167,39 @@ function toggleComisionistas() {
 // Al cambiar de comisionista, mostramos su acuerdo
 document.getElementById('selectComis').addEventListener('change', actualizarDetalleComis);
 
+// Función para mostrar el detalle completo del comisionista seleccionado
 function actualizarDetalleComis() {
-    const nombre = document.getElementById('selectComis').value;
-    const comi = listaComisionistas.find(c => c.nombre === nombre);
+    const nombreSeleccionado = document.getElementById('selectComis').value;
+    const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSeleccionado);
+    
+    const infoDiv = document.getElementById('detalleComis');
     if (comi) {
-        document.getElementById('detalleComis').innerText = `Contacto: ${comi.contacto} | Acuerdo: ${comi.acuerdo}`;
+        infoDiv.innerHTML = `
+            <strong>Contacto:</strong> ${comi.celular} | ${comi.email}<br>
+            <strong>Acuerdo:</strong> <span class="text-success">${comi.acuerdo}</span>
+        `;
     }
 }
 
-// Modifica tu función cargarLeads original para que acepte la nueva estructura
+// Modificación en la carga inicial
 async function cargarLeads() {
     const response = await fetch(URL_GOOGLE_SCRIPT);
     const data = await response.json();
     
-    // Guardamos y cargamos comisionistas
     listaComisionistas = data.comisionistas;
     const select = document.getElementById('selectComis');
-    select.innerHTML = listaComisionistas.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
     
+    // Cargamos el select con "Nombre Apellido"
+    select.innerHTML = listaComisionistas.map(c => 
+        `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
+    ).join('');
+    
+    // Escuchamos cambios para actualizar el texto de ayuda
+    select.addEventListener('change', actualizarDetalleComis);
+    
+    // Si ya hay comisionistas, mostramos el detalle del primero por defecto
+    if(listaComisionistas.length > 0) actualizarDetalleComis();
+
     renderizarTabla(data.leads);
 }
 
