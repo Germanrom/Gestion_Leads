@@ -217,10 +217,11 @@
                     <div class="fw-bold" style="font-size: 0.85rem;">Últ. Contacto: ${ultCont}</div>
                     <small class="text-secondary">${l.comentarios || '-'}</small>
                 </td>
+                // Dentro de renderizarTabla, en la columna de Acción:
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm" title="WhatsApp">💬</a>
-                        <a href="mailto:${l.email}" class="btn btn-outline-primary btn-sm" title="Enviar Email">✉️</a>
+                        <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                        <button class="btn btn-primary btn-sm" onclick="abrirSeguimiento('${l.nombre}', '${l.email}', '${l.comentarios || ''}')">📝</button>
                     </div>
                 </td>
             </tr>`;
@@ -305,7 +306,76 @@
             toggleComisionistas();
         }
     });
-</script>
+    // Variable global para controlar el modal
+let modalSeguimiento;
+document.addEventListener('DOMContentLoaded', () => {
+    modalSeguimiento = new bootstrap.Modal(document.getElementById('modalSeguimiento'));
+});
 
+function abrirSeguimiento(nombre, email, comentariosActuales) {
+    document.getElementById('modalNombreCliente').innerText = "Cliente: " + nombre;
+    document.getElementById('editEmail').value = email;
+    document.getElementById('historialViejo').value = comentariosActuales;
+    document.getElementById('nuevoComentario').value = "";
+    modalSeguimiento.show();
+}
+
+async function guardarSeguimiento() {
+    const email = document.getElementById('editEmail').value;
+    const nuevo = document.getElementById('nuevoComentario').value;
+    const viejo = document.getElementById('historialViejo').value;
+    const fechaHoy = new Date().toLocaleDateString('es-AR');
+
+    if (!nuevo) return alert("Escribe un comentario.");
+
+    // Creamos el historial acumulado: "Fecha: Comentario | Historial anterior"
+    const historialActualizado = `[${fechaHoy}]: ${nuevo} \n ${viejo}`;
+
+    const datos = {
+        email: email,
+        comentarios: historialActualizado,
+        fUltContacto: fechaHoy
+    };
+
+    try {
+        // Usamos POST porque Google Apps Script maneja mejor POST que PUT en modo no-cors
+        // Pero en el Script usamos una lógica que busca y reemplaza.
+        await fetch(URL_GOOGLE_SCRIPT, {
+            method: 'POST', 
+            mode: 'no-cors',
+            body: JSON.stringify({action: "update", ...datos}) 
+        });
+
+        alert("Seguimiento registrado.");
+        modalSeguimiento.hide();
+        cargarTodo(); // Recargar tabla
+    } catch (err) {
+        alert("Error al actualizar.");
+    }
+}
+</script>
+<div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">Registrar Seguimiento</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="modalNombreCliente" class="fw-bold"></p>
+        <label class="form-label">Nuevo Comentario:</label>
+        <textarea id="nuevoComentario" class="form-control" rows="3" placeholder="Escribe aquí el avance de hoy..."></textarea>
+        <input type="hidden" id="editEmail">
+        <input type="hidden" id="historialViejo">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarSeguimiento()">Guardar Avance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
