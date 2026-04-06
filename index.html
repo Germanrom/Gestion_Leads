@@ -220,7 +220,7 @@
                 <td>
                     <div class="d-flex gap-1">
                         <a href="https://wa.me/${cel}" target="_blank" class="btn btn-success btn-sm">💬</a>
-                        <button class="btn btn-primary btn-sm" onclick="abrirSeguimiento('${l.nombre}', '${l.email}', '${l.comentarios || ''}')">📝</button>
+                        <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${JSON.stringify(l)})'>📝</button>
                     </div>
                 </td>
             </tr>`;
