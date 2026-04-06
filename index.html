@@ -91,7 +91,8 @@
     // ==========================================
     // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
     // ==========================================
-    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxcSq2QN3xUwYIwtG-JLbSOVUGJlZJS-JPEH8BHnoj63UqJpv6ypUyMKiweL_P9TKdU/exec"; // <--- REEMPLAZA ESTO
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycby2dREDghZRzhgVNyOsIVXZ4x49_zmJs0EVkJxKEGV5vZiyz-pVO91lvktYREDD9RbY/exec";        
+                        //v6.2"https://script.google.com/macros/s/AKfycbxcSq2QN3xUwYIwtG-JLbSOVUGJlZJS-JPEH8BHnoj63UqJpv6ypUyMKiweL_P9TKdU/exec"; // <--- REEMPLAZA ESTO
     
     let listaLeads = [];
     let listaComisionistas = [];
@@ -268,29 +269,58 @@
     // ==========================================
     // 5. LÓGICA DE SEGUIMIENTO (EDICIÓN)
     // ==========================================
-    function prepararSeguimiento(lead) {
-        document.getElementById('modalNombreCliente').innerText = "Seguimiento: " + lead.nombre;
-        document.getElementById('editEmail').value = lead.email;
+   function prepararSeguimiento(lead) {
+        // Guardamos los datos originales ocultos
+        document.getElementById('originalEmail').value = lead.email; 
         document.getElementById('historialViejo').value = lead.comentarios || "";
+        
+        // El formato de fecha viejo (cortado en la T si viene de Google)
+        const fechaVieja = (lead.fUltContacto && lead.fUltContacto.includes('T')) 
+            ? lead.fUltContacto.split('T')[0] 
+            : (lead.fUltContacto || "");
+        document.getElementById('fechaContactoVieja').value = fechaVieja;
+
+        // Llenamos los campos editables
+        document.getElementById('editNombre').value = lead.nombre;
+        document.getElementById('editCelular').value = lead.celular;
+        document.getElementById('editEmail').value = lead.email;
+        
         document.getElementById('nuevoComentario').value = ""; 
         miModal.show();
     }
-
-    async function guardarSeguimiento() {
+    
+async function guardarSeguimiento() {
+        const originalEmail = document.getElementById('originalEmail').value;
+        const nombre = document.getElementById('editNombre').value;
+        const celular = document.getElementById('editCelular').value;
         const email = document.getElementById('editEmail').value;
-        const nuevo = document.getElementById('nuevoComentario').value;
-        const viejo = document.getElementById('historialViejo').value;
+        
+        const nuevoComentario = document.getElementById('nuevoComentario').value;
+        const historialPrevio = document.getElementById('historialViejo').value;
         const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-        if (!nuevo.trim()) return alert("Escribe un avance.");
+        // Lógica inteligente: ¿Agregó un comentario o solo editó datos?
+        let historialActualizado = historialPrevio;
+        let fechaActualizada = document.getElementById('fechaContactoVieja').value; // Mantenemos la vieja
 
-        const historialActualizado = `[${fechaHoy}]: ${nuevo}\n${viejo}`;
+        if (nuevoComentario.trim() !== "") {
+            // Si hay comentario nuevo, actualizamos el historial y la fecha a HOY
+            historialActualizado = `[${fechaHoy}]: ${nuevoComentario}\n${historialPrevio}`;
+            fechaActualizada = new Date().toLocaleDateString('en-CA');
+        }
+
+        const btn = document.querySelector('#modalSeguimiento .btn-primary');
+        btn.disabled = true;
+        btn.innerText = "Guardando...";
 
         const datos = {
             action: "update",
+            originalEmail: originalEmail, // Usamos esto para buscar la fila en el Excel
+            nombre: nombre,
+            celular: celular,
             email: email,
             comentarios: historialActualizado,
-            fUltContacto: new Date().toLocaleDateString('en-CA')
+            fUltContacto: fechaActualizada
         };
 
         try {
@@ -299,14 +329,17 @@
                 mode: 'no-cors',
                 body: JSON.stringify(datos)
             });
-            alert("Seguimiento actualizado.");
+            alert("¡Cambios guardados correctamente!");
             miModal.hide();
             cargarTodo();
-        } catch (err) {
-            alert("Error al actualizar.");
+        } catch (error) {
+            console.error("Error:", error);
+            alert("No se pudieron guardar los cambios.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Guardar Cambios";
         }
     }
-
     function descargarReporte() {
         let csv = "Nombre,Celular,Email,Origen,Comentarios,Alta Lead,Alta Comi,Ult Contacto\n";
         listaLeads.forEach(l => {
@@ -325,24 +358,41 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title">Registrar Seguimiento</h5>
+        <h5 class="modal-title">Editar Lead y Seguimiento</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p id="modalNombreCliente" class="fw-bold"></p>
-        <label class="form-label">Nuevo Comentario:</label>
-        <textarea id="nuevoComentario" class="form-control" rows="3" placeholder="Escribe aquí el avance de hoy..."></textarea>
-        <input type="hidden" id="editEmail">
+        <input type="hidden" id="originalEmail">
         <input type="hidden" id="historialViejo">
+        <input type="hidden" id="fechaContactoVieja">
+
+        <div class="mb-2">
+            <label class="form-label small fw-bold text-secondary mb-0">Nombre / Razón Social</label>
+            <input type="text" id="editNombre" class="form-control form-control-sm">
+        </div>
+        <div class="row mb-3">
+            <div class="col-6">
+                <label class="form-label small fw-bold text-secondary mb-0">Celular</label>
+                <input type="tel" id="editCelular" class="form-control form-control-sm">
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-bold text-secondary mb-0">Email</label>
+                <input type="email" id="editEmail" class="form-control form-control-sm">
+            </div>
+        </div>
+        
+        <hr>
+        <label class="form-label fw-bold">Nuevo Avance / Comentario:</label>
+        <textarea id="nuevoComentario" class="form-control" rows="3" placeholder="Si hablaste con el cliente hoy, escríbelo aquí..."></textarea>
+        <small class="text-muted" style="font-size: 0.7rem;">(Si solo corriges datos arriba, deja esto en blanco)</small>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        <button type="button" class="btn btn-primary" onclick="guardarSeguimiento()">Guardar Avance</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarSeguimiento()">Guardar Cambios</button>
       </div>
     </div>
   </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
