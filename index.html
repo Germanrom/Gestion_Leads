@@ -71,18 +71,19 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Origen</th>
-                        <th>Comentarios</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaLeads">
-                    <tr><td colspan="5" class="text-center">Cargando datos...</td></tr>
-                </tbody>
-            </table>
+        <thead class="table-light">
+            <tr>
+                <th>Cliente y Email</th>
+                <th>Celular</th>
+                <th>Origen</th>
+                <th>Seguimiento</th>
+                <th class="text-center">Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tablaLeads">
+            <tr><td colspan="5" class="text-center">Cargando datos...</td></tr>
+        </tbody>
+    </table>
         </div>
     </div>
 </div>
@@ -163,16 +164,22 @@
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        leads.forEach((l, index) => {
+        if (!leads || leads.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads registrados aún</td></tr>';
+            return;
+        }
+
+        leads.forEach((l) => {
             const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
             
-            // Limpieza de fechas (YYYY-MM-DD)
+            // Limpieza de fechas
             const fAlta = (l.fAltaLead && l.fAltaLead.includes('T')) ? l.fAltaLead.split('T')[0] : (l.fAltaLead || '-');
             const fComi = (l.fAltaComi && l.fAltaComi.includes('T')) ? l.fAltaComi.split('T')[0] : (l.fAltaComi || '-');
             const fCont = (l.fUltContacto && l.fUltContacto.includes('T')) ? l.fUltContacto.split('T')[0] : (l.fUltContacto || '-');
 
             const badgeClass = l.origen.includes('Comisionista') ? 'bg-warning text-dark' : 'bg-info text-dark';
 
+            // AQUÍ ESTÁN LAS 5 COLUMNAS EXACTAS
             tbody.innerHTML += `
                 <tr>
                     <td>
@@ -180,19 +187,23 @@
                         <small class="text-primary">${l.email}</small><br>
                         <small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small>
                     </td>
+                    
                     <td>${l.celular}</td>
+                    
                     <td>
                         <span class="badge ${badgeClass}">${l.origen}</span><br>
                         <small class="text-muted" style="font-size:0.7rem">Socio desde: ${fComi}</small>
                     </td>
+                    
                     <td>
                         <div class="fw-bold" style="font-size:0.8rem">Ult. Contacto: ${fCont}</div>
                         <small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${l.comentarios || '-'}
                         </small>
                     </td>
-                    <td>
-                        <div class="d-flex gap-1">
+                    
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
                             <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
                             <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${JSON.stringify(l)})'>📝</button>
                         </div>
