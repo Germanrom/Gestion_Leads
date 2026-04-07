@@ -88,58 +88,53 @@
     </div>
 </div>
 
-<script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script>
     // ==========================================
-    // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
+    // 1. CONFIGURACIÓN DE FIREBASE
     // ==========================================
-    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycby2dREDghZRzhgVNyOsIVXZ4x49_zmJs0EVkJxKEGV5vZiyz-pVO91lvktYREDD9RbY/exec";        
-                        //v6.2"https://script.google.com/macros/s/AKfycbxcSq2QN3xUwYIwtG-JLbSOVUGJlZJS-JPEH8BHnoj63UqJpv6ypUyMKiweL_P9TKdU/exec"; // <--- REEMPLAZA ESTO
-    
+    const firebaseConfig = {
+        apiKey: "AIzaSyCbIv0A_rTWcG7-oQnwqwn4an3GySo8Jqg",
+        authDomain: "fivepeaks-crm-leads.firebaseapp.com",
+        projectId: "fivepeaks-crm-leads",
+        storageBucket: "fivepeaks-crm-leads.firebasestorage.app",
+        messagingSenderId: "1009686577157",
+        appId: "1:1009686577157:web:bcc03f94f6eb00fa361c6c"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Variables Globales
     let listaLeads = [];
     let listaComisionistas = [];
     let miModal;
+    let leadEditandoId = null; // Guardará el ID secreto de Firebase al editar
 
     // ==========================================
     // 2. INICIO Y CARGA DE DATOS
     // ==========================================
     document.addEventListener('DOMContentLoaded', () => {
-        // Inicializamos el modal de Bootstrap
         const modalElement = document.getElementById('modalSeguimiento');
-        if (modalElement) {
-            miModal = new bootstrap.Modal(modalElement);
-        }
+        if (modalElement) miModal = new bootstrap.Modal(modalElement);
         
         cargarTodo();
         
-        // Listener para cambio de comisionista en el formulario de alta
         const selectComis = document.getElementById('selectComis');
-        if (selectComis) {
-            selectComis.addEventListener('change', actualizarDetalleComis);
-        }
-
-        // Lógica de "Link Mágico"
-        const params = new URLSearchParams(window.location.search);
-        if(params.has('nombre')) document.getElementById('nombre').value = params.get('nombre');
-        if(params.has('celular')) document.getElementById('celular').value = params.get('celular');
-        if(params.has('origen')) {
-            document.getElementById('origen').value = params.get('origen');
-            toggleComisionistas();
-        }
+        if (selectComis) selectComis.addEventListener('change', actualizarDetalleComis);
     });
 
     async function cargarTodo() {
-        const tabla = document.getElementById('tablaLeads');
         try {
-            const response = await fetch(URL_GOOGLE_SCRIPT, {
-                method: 'GET',
-                redirect: 'follow'
+            // 1. Cargar Comisionistas desde Firestore
+            const comiSnapshot = await db.collection('comisionistas').get();
+            listaComisionistas = [];
+            comiSnapshot.forEach(doc => {
+                listaComisionistas.push({ id: doc.id, ...doc.data() });
             });
-            const data = await response.json();
-            
-            listaLeads = data.leads || [];
-            listaComisionistas = data.comisionistas || [];
 
-            // Poblar select de comisionistas
             const selectComis = document.getElementById('selectComis');
             if (selectComis) {
                 selectComis.innerHTML = listaComisionistas.map(c => 
@@ -147,17 +142,24 @@
                 ).join('');
             }
 
+            // 2. Cargar Leads desde Firestore
+            const leadsSnapshot = await db.collection('leads').get();
+            listaLeads = [];
+            leadsSnapshot.forEach(doc => {
+                listaLeads.push({ id: doc.id, ...doc.data() });
+            });
+
             renderizarTabla(listaLeads);
             if(listaComisionistas.length > 0) actualizarDetalleComis();
 
         } catch (error) {
-            console.error("Error crítico:", error);
-            if(tabla) tabla.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error de conexión con la base de datos.</td></tr>';
+            console.error("Error al conectar con Firebase:", error);
+            document.getElementById('tablaLeads').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error de conexión.</td></tr>';
         }
     }
 
     // ==========================================
-    // 3. RENDERIZADO DE TABLA
+    // 3. RENDERIZADO DE TABLA (5 COLUMNAS)
     // ==========================================
     function renderizarTabla(leads) {
         const tbody = document.getElementById('tablaLeads');
@@ -165,21 +167,20 @@
         tbody.innerHTML = '';
 
         if (!leads || leads.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads registrados aún</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads en la base de datos</td></tr>';
             return;
         }
 
+        // Ordenar leads por fecha (los más nuevos arriba)
+        leads.sort((a, b) => new Date(b.fAltaLead || 0) - new Date(a.fAltaLead || 0));
+
         leads.forEach((l) => {
             const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
-            
-            // Limpieza de fechas
             const fAlta = (l.fAltaLead && l.fAltaLead.includes('T')) ? l.fAltaLead.split('T')[0] : (l.fAltaLead || '-');
             const fComi = (l.fAltaComi && l.fAltaComi.includes('T')) ? l.fAltaComi.split('T')[0] : (l.fAltaComi || '-');
             const fCont = (l.fUltContacto && l.fUltContacto.includes('T')) ? l.fUltContacto.split('T')[0] : (l.fUltContacto || '-');
+            const badgeClass = (l.origen && l.origen.includes('Comisionista')) ? 'bg-warning text-dark' : 'bg-info text-dark';
 
-            const badgeClass = l.origen.includes('Comisionista') ? 'bg-warning text-dark' : 'bg-info text-dark';
-
-            // AQUÍ ESTÁN LAS 5 COLUMNAS EXACTAS
             tbody.innerHTML += `
                 <tr>
                     <td>
@@ -187,25 +188,21 @@
                         <small class="text-primary">${l.email}</small><br>
                         <small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small>
                     </td>
-                    
                     <td>${l.celular}</td>
-                    
                     <td>
                         <span class="badge ${badgeClass}">${l.origen}</span><br>
-                        <small class="text-muted" style="font-size:0.7rem">Socio desde: ${fComi}</small>
+                        <small class="text-muted" style="font-size:0.7rem">Socio: ${fComi}</small>
                     </td>
-                    
                     <td>
                         <div class="fw-bold" style="font-size:0.8rem">Ult. Contacto: ${fCont}</div>
                         <small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                             ${l.comentarios || '-'}
                         </small>
                     </td>
-                    
                     <td class="text-center">
                         <div class="d-flex justify-content-center gap-1">
                             <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
-                            <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${JSON.stringify(l)})'>📝</button>
+                            <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${JSON.stringify(l).replace(/'/g, "&apos;")})'>📝</button>
                         </div>
                     </td>
                 </tr>`;
@@ -228,7 +225,7 @@
         const infoDiv = document.getElementById('detalleComis');
         
         if (comi && infoDiv) {
-            const fechaLimpia = (comi.fechaAlta && comi.fechaAlta.includes('T')) ? comi.fechaAlta.split('T')[0] : comi.fechaAlta;
+            const fechaLimpia = (comi.fechaAlta && comi.fechaAlta.includes('T')) ? comi.fechaAlta.split('T')[0] : (comi.fechaAlta || '-');
             infoDiv.innerHTML = `<strong>WA:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo} | <strong>Alta:</strong> ${fechaLimpia}`;
         }
     }
@@ -246,8 +243,10 @@
             const nombreComis = document.getElementById('selectComis').value;
             origenFinal = "Comisionista: " + nombreComis;
             const cData = listaComisionistas.find(c => c.nombreCompleto === nombreComis);
-            if(cData) fAltaComi = cData.fechaAlta;
+            if(cData) fAltaComi = cData.fechaAlta || '-';
         }
+
+        const fechaHoy = new Date().toLocaleDateString('en-CA');
 
         const datos = {
             nombre: document.getElementById('nombre').value,
@@ -256,21 +255,21 @@
             origen: origenFinal,
             comentarios: document.getElementById('comentarios').value,
             fAltaComi: fAltaComi,
-            fUltContacto: new Date().toLocaleDateString('en-CA') // Formato YYYY-MM-DD
+            fAltaLead: fechaHoy,
+            fUltContacto: fechaHoy
         };
 
         try {
-            await fetch(URL_GOOGLE_SCRIPT, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(datos)
-            });
+            // Guardar en Firestore (Colección 'leads')
+            await db.collection('leads').add(datos);
+            
             alert("Lead guardado con éxito.");
             document.getElementById('leadForm').reset();
             toggleComisionistas();
-            cargarTodo();
+            cargarTodo(); // Recargar tabla
         } catch (err) {
-            alert("Error al guardar.");
+            console.error("Error al guardar:", err);
+            alert("Error al guardar en la base de datos.");
         } finally {
             btn.disabled = false;
             btn.innerText = "Guardar Lead";
@@ -278,91 +277,65 @@
     });
 
     // ==========================================
-    // 5. LÓGICA DE SEGUIMIENTO (EDICIÓN)
+    // 5. LÓGICA DE SEGUIMIENTO (EDICIÓN Y ACTUALIZACIÓN)
     // ==========================================
-   function prepararSeguimiento(lead) {
-        // Guardamos los datos originales ocultos
-        document.getElementById('originalEmail').value = lead.email; 
-        document.getElementById('historialViejo').value = lead.comentarios || "";
+    function prepararSeguimiento(lead) {
+        leadEditandoId = lead.id; // ID único de Firebase
         
-        // El formato de fecha viejo (cortado en la T si viene de Google)
-        const fechaVieja = (lead.fUltContacto && lead.fUltContacto.includes('T')) 
-            ? lead.fUltContacto.split('T')[0] 
-            : (lead.fUltContacto || "");
+        document.getElementById('historialViejo').value = lead.comentarios || "";
+        const fechaVieja = (lead.fUltContacto && lead.fUltContacto.includes('T')) ? lead.fUltContacto.split('T')[0] : (lead.fUltContacto || "");
         document.getElementById('fechaContactoVieja').value = fechaVieja;
 
-        // Llenamos los campos editables
-        document.getElementById('editNombre').value = lead.nombre;
-        document.getElementById('editCelular').value = lead.celular;
-        document.getElementById('editEmail').value = lead.email;
+        document.getElementById('editNombre').value = lead.nombre || "";
+        document.getElementById('editCelular').value = lead.celular || "";
+        document.getElementById('editEmail').value = lead.email || "";
         
         document.getElementById('nuevoComentario').value = ""; 
         miModal.show();
     }
-    
-async function guardarSeguimiento() {
-        const originalEmail = document.getElementById('originalEmail').value;
-        const nombre = document.getElementById('editNombre').value;
-        const celular = document.getElementById('editCelular').value;
-        const email = document.getElementById('editEmail').value;
-        
-        const nuevoComentario = document.getElementById('nuevoComentario').value;
-        const historialPrevio = document.getElementById('historialViejo').value;
-        const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-        // Lógica inteligente: ¿Agregó un comentario o solo editó datos?
-        let historialActualizado = historialPrevio;
-        let fechaActualizada = document.getElementById('fechaContactoVieja').value; // Mantenemos la vieja
-
-        if (nuevoComentario.trim() !== "") {
-            // Si hay comentario nuevo, actualizamos el historial y la fecha a HOY
-            historialActualizado = `[${fechaHoy}]: ${nuevoComentario}\n${historialPrevio}`;
-            fechaActualizada = new Date().toLocaleDateString('en-CA');
-        }
+    async function guardarSeguimiento() {
+        if (!leadEditandoId) return;
 
         const btn = document.querySelector('#modalSeguimiento .btn-primary');
         btn.disabled = true;
         btn.innerText = "Guardando...";
 
-        const datos = {
-            action: "update",
-            originalEmail: originalEmail, // Usamos esto para buscar la fila en el Excel
-            nombre: nombre,
-            celular: celular,
-            email: email,
+        const nuevoComentario = document.getElementById('nuevoComentario').value;
+        const historialPrevio = document.getElementById('historialViejo').value;
+        const fechaHoy = new Date().toLocaleDateString('es-AR');
+
+        let historialActualizado = historialPrevio;
+        let fechaActualizada = document.getElementById('fechaContactoVieja').value;
+
+        if (nuevoComentario.trim() !== "") {
+            historialActualizado = `[${fechaHoy}]: ${nuevoComentario}\n${historialPrevio}`;
+            fechaActualizada = new Date().toLocaleDateString('en-CA');
+        }
+
+        const datosActualizados = {
+            nombre: document.getElementById('editNombre').value,
+            celular: document.getElementById('editCelular').value,
+            email: document.getElementById('editEmail').value,
             comentarios: historialActualizado,
             fUltContacto: fechaActualizada
         };
 
         try {
-            await fetch(URL_GOOGLE_SCRIPT, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(datos)
-            });
+            // Actualizar documento específico en Firestore
+            await db.collection('leads').doc(leadEditandoId).update(datosActualizados);
+            
             alert("¡Cambios guardados correctamente!");
             miModal.hide();
             cargarTodo();
         } catch (error) {
-            console.error("Error:", error);
+            console.error("Error al actualizar:", error);
             alert("No se pudieron guardar los cambios.");
         } finally {
             btn.disabled = false;
             btn.innerText = "Guardar Cambios";
+            leadEditandoId = null;
         }
-    }
-    function descargarReporte() {
-        let csv = "Nombre,Celular,Email,Origen,Comentarios,Alta Lead,Alta Comi,Ult Contacto\n";
-        listaLeads.forEach(l => {
-            csv += `"${l.nombre}","${l.celular}","${l.email}","${l.origen}","${l.comentarios}","${l.fAltaLead}","${l.fAltaComi}","${l.fUltContacto}"\n`;
-        });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", "reporte_leads.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 </script>
 <div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
