@@ -3,20 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Leads - Five Peaks</title>
+    <title>CRM - Gestión de Leads</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f4f7f6; }
-        .container { margin-top: 20px; max-width: 1000px; }
+        .crm-container { margin-top: 20px; max-width: 1000px; }
         .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
-        .badge-genuino { background-color: #0dcaf0; color: #000; }
-        .badge-comi { background-color: #ffc107; color: #000; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 class="text-center mb-4 text-primary">Panel de Gestión de Leads</h2>
+<div id="pantallaLogin" class="container" style="max-width: 400px; margin-top: 10vh;">
+    <div class="card shadow">
+        <div class="card-body p-4">
+            <h3 class="text-center text-primary mb-4">Iniciar Sesión</h3>
+            <form id="formLogin">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="loginEmail" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" id="loginPass" class="form-control" required>
+                </div>
+                <button type="submit" id="btnLogin" class="btn btn-primary w-100">Entrar al CRM</button>
+            </form>
+            <div id="loginError" class="text-danger mt-3 text-center small" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="pantallaCRM" class="container crm-container" style="display: none;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary m-0">Panel de Gestión de Leads</h2>
+        <button class="btn btn-outline-danger btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
+    </div>
 
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">Registrar Nuevo Lead</div>
@@ -24,15 +46,15 @@
             <form id="leadForm" class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label font-weight-bold">Nombre / Razón Social</label>
-                    <input type="text" id="nombre" class="form-control" placeholder="Ej: Juan Pérez" required>
+                    <input type="text" id="nombre" class="form-control" required>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Celular</label>
-                    <input type="tel" id="celular" class="form-control" placeholder="549381..." required>
+                    <input type="tel" id="celular" class="form-control" required>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Email</label>
-                    <input type="email" id="email" class="form-control" placeholder="correo@ejemplo.com" required>
+                    <input type="email" id="email" class="form-control">
                 </div>
                 
                 <div class="col-md-4">
@@ -42,59 +64,92 @@
                         <option value="Comisionista">Comisionista</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Fecha de Último Contacto</label>
-                    <input type="date" id="fUltContacto" class="form-control">
-                </div>
+
                 <div class="col-md-8" id="divComisionistas" style="display: none;">
                     <label class="form-label text-danger">Seleccionar Comisionista</label>
-                    <select id="selectComis" class="form-select"></select>
+                    <select id="selectComis" class="form-select" onchange="actualizarDetalleComis()"></select>
                     <div id="detalleComis" class="mt-2 p-2 bg-light border rounded small text-muted"></div>
                 </div>
 
                 <div class="col-12">
-                    <label class="form-label">Comentarios / Seguimiento</label>
-                    <textarea id="comentarios" class="form-control" rows="2" placeholder="Notas de la llamada..."></textarea>
+                    <label class="form-label">Comentarios / Seguimiento inicial</label>
+                    <textarea id="comentarios" class="form-control" rows="2"></textarea>
                 </div>
                 <div class="col-12 mt-4">
-                    <button type="submit" id="btnGuardar" class="btn btn-primary px-5">Guardar Lead</button>
-                    <button type="button" onclick="descargarReporte()" class="btn btn-outline-secondary float-end">Descargar Reporte</button>
+                    <button type="submit" class="btn btn-primary px-5">Guardar Lead</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            Listado Compartido
-            <button class="btn btn-sm btn-outline-light" onclick="cargarTodo()">🔄 Actualizar</button>
-        </div>
+        <div class="card-header bg-dark text-white">Listado Compartido</div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-            <tr>
-                <th>Cliente y Email</th>
-                <th>Celular</th>
-                <th>Origen</th>
-                <th>Seguimiento</th>
-                <th class="text-center">Acción</th>
-            </tr>
-        </thead>
-        <tbody id="tablaLeads">
-            <tr><td colspan="5" class="text-center">Cargando datos...</td></tr>
-        </tbody>
-    </table>
+                <thead class="table-light">
+                    <tr>
+                        <th>Cliente y Email</th>
+                        <th>Celular</th>
+                        <th>Origen</th>
+                        <th>Seguimiento</th>
+                        <th class="text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaLeads">
+                    <tr><td colspan="5" class="text-center">Cargando datos...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Editar Lead</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="historialViejo">
+                <input type="hidden" id="fechaContactoVieja">
+
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-secondary mb-0">Nombre</label>
+                    <input type="text" id="editNombre" class="form-control form-control-sm">
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-0">Celular</label>
+                        <input type="tel" id="editCelular" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-0">Email</label>
+                        <input type="email" id="editEmail" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <hr>
+                <label class="form-label fw-bold">Nuevo Avance:</label>
+                <textarea id="nuevoComentario" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarSeguimiento()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-    <script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+<script>
     // ==========================================
-    // 1. CONFIGURACIÓN DE FIREBASE
+    // 4. CONFIGURACIÓN FIREBASE
     // ==========================================
     const firebaseConfig = {
+        // !!!!!!!! PEGA TU CÓDIGO AQUÍ !!!!!!!!
         apiKey: "AIzaSyCbIv0A_rTWcG7-oQnwqwn4an3GySo8Jqg",
         authDomain: "fivepeaks-crm-leads.firebaseapp.com",
         projectId: "fivepeaks-crm-leads",
@@ -103,102 +158,114 @@
         appId: "1:1009686577157:web:bcc03f94f6eb00fa361c6c"
     };
 
-    // Inicializar Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    // Variables Globales
     let listaLeads = [];
     let listaComisionistas = [];
     let miModal;
-    let leadEditandoId = null; // Guardará el ID secreto de Firebase al editar
+    let leadEditandoId = null;
 
     // ==========================================
-    // 2. INICIO Y CARGA DE DATOS
+    // 5. LÓGICA DE AUTENTICACIÓN (LOGIN)
     // ==========================================
-    document.addEventListener('DOMContentLoaded', () => {
-        const modalElement = document.getElementById('modalSeguimiento');
-        if (modalElement) miModal = new bootstrap.Modal(modalElement);
-        
-        cargarTodo();
-        
-        const selectComis = document.getElementById('selectComis');
-        if (selectComis) selectComis.addEventListener('change', actualizarDetalleComis);
+    // Observador de estado de sesión
+    auth.onAuthStateChanged((user) => {
+        const divLogin = document.getElementById('pantallaLogin');
+        const divCRM = document.getElementById('pantallaCRM');
+
+        if (user) {
+            // Usuario logueado: Ocultamos login, mostramos CRM y cargamos datos
+            divLogin.style.display = 'none';
+            divCRM.style.display = 'block';
+            iniciarCRM();
+        } else {
+            // No hay usuario: Mostramos login
+            divLogin.style.display = 'block';
+            divCRM.style.display = 'none';
+        }
     });
 
-    async function cargarTodo() {
+    // Evento de Login
+    document.getElementById('formLogin').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+        const btn = document.getElementById('btnLogin');
+        const errorDiv = document.getElementById('loginError');
+        
+        btn.disabled = true;
+        btn.innerText = "Verificando...";
+        errorDiv.style.display = 'none';
+
         try {
-            // 1. Cargar Comisionistas desde Firestore
-            const comiSnapshot = await db.collection('comisionistas').get();
-            listaComisionistas = [];
-            comiSnapshot.forEach(doc => {
-                listaComisionistas.push({ id: doc.id, ...doc.data() });
-            });
-
-            const selectComis = document.getElementById('selectComis');
-            if (selectComis) {
-                selectComis.innerHTML = listaComisionistas.map(c => 
-                    `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`
-                ).join('');
-            }
-
-            // 2. Cargar Leads desde Firestore
-            const leadsSnapshot = await db.collection('leads').get();
-            listaLeads = [];
-            leadsSnapshot.forEach(doc => {
-                listaLeads.push({ id: doc.id, ...doc.data() });
-            });
-
-            renderizarTabla(listaLeads);
-            if(listaComisionistas.length > 0) actualizarDetalleComis();
-
+            await auth.signInWithEmailAndPassword(email, pass);
+            // Si el login es exitoso, el onAuthStateChanged se activa solo
         } catch (error) {
-            console.error("Error al conectar con Firebase:", error);
-            document.getElementById('tablaLeads').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error de conexión.</td></tr>';
+            errorDiv.innerText = "Credenciales incorrectas. Verifica tu email y contraseña.";
+            errorDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "Entrar al CRM";
         }
+    });
+
+    function cerrarSesion() {
+        auth.signOut();
     }
 
     // ==========================================
-    // 3. RENDERIZADO DE TABLA (5 COLUMNAS)
+    // 6. LÓGICA DEL CRM
     // ==========================================
+    function iniciarCRM() {
+        const modalElement = document.getElementById('modalSeguimiento');
+        if (modalElement) miModal = new bootstrap.Modal(modalElement);
+        cargarTodo();
+    }
+
+    async function cargarTodo() {
+        try {
+            const comiSnap = await db.collection('comisionistas').get();
+            listaComisionistas = comiSnap.docs.map(d => ({id: d.id, ...d.data()}));
+            
+            const selectComis = document.getElementById('selectComis');
+            selectComis.innerHTML = listaComisionistas.map(c => `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`).join('');
+
+            const leadsSnap = await db.collection('leads').get();
+            listaLeads = leadsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+            renderizarTabla(listaLeads);
+            if(listaComisionistas.length > 0) actualizarDetalleComis();
+        } catch (error) {
+            console.error("Error cargando datos:", error);
+            alert("Error al cargar la base de datos.");
+        }
+    }
+
     function renderizarTabla(leads) {
         const tbody = document.getElementById('tablaLeads');
-        if (!tbody) return;
         tbody.innerHTML = '';
 
-        if (!leads || leads.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads en la base de datos</td></tr>';
+        if (leads.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads</td></tr>';
             return;
         }
 
-        // Ordenar leads por fecha (los más nuevos arriba)
         leads.sort((a, b) => new Date(b.fAltaLead || 0) - new Date(a.fAltaLead || 0));
 
-        leads.forEach((l) => {
-            const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
+        leads.forEach(l => {
             const fAlta = (l.fAltaLead && l.fAltaLead.includes('T')) ? l.fAltaLead.split('T')[0] : (l.fAltaLead || '-');
             const fComi = (l.fAltaComi && l.fAltaComi.includes('T')) ? l.fAltaComi.split('T')[0] : (l.fAltaComi || '-');
             const fCont = (l.fUltContacto && l.fUltContacto.includes('T')) ? l.fUltContacto.split('T')[0] : (l.fUltContacto || '-');
-            const badgeClass = (l.origen && l.origen.includes('Comisionista')) ? 'bg-warning text-dark' : 'bg-info text-dark';
+            const badgeClass = (l.origen && l.origen.includes('Comi')) ? 'bg-warning text-dark' : 'bg-info text-dark';
+            const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
 
             tbody.innerHTML += `
                 <tr>
-                    <td>
-                        <strong>${l.nombre}</strong><br>
-                        <small class="text-primary">${l.email}</small><br>
-                        <small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small>
-                    </td>
+                    <td><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || ''}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
                     <td>${l.celular}</td>
-                    <td>
-                        <span class="badge ${badgeClass}">${l.origen}</span><br>
-                        <small class="text-muted" style="font-size:0.7rem">Socio: ${fComi}</small>
-                    </td>
-                    <td>
-                        <div class="fw-bold" style="font-size:0.8rem">Ult. Contacto: ${fCont}</div>
-                        <small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            ${l.comentarios || '-'}
-                        </small>
-                    </td>
+                    <td><span class="badge ${badgeClass}">${l.origen}</span><br><small class="text-muted" style="font-size:0.7rem">Socio: ${fComi}</small></td>
+                    <td><div class="fw-bold" style="font-size:0.8rem">Ult: ${fCont}</div><small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.comentarios || '-'}</small></td>
                     <td class="text-center">
                         <div class="d-flex justify-content-center gap-1">
                             <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
@@ -209,9 +276,6 @@
         });
     }
 
-    // ==========================================
-    // 4. LÓGICA DE FORMULARIO (ALTA NUEVA)
-    // ==========================================
     function toggleComisionistas() {
         const origen = document.getElementById('origen').value;
         const div = document.getElementById('divComisionistas');
@@ -220,13 +284,10 @@
     }
 
     function actualizarDetalleComis() {
-        const nombreSel = document.getElementById('selectComis').value;
-        const comi = listaComisionistas.find(c => c.nombreCompleto === nombreSel);
-        const infoDiv = document.getElementById('detalleComis');
-        
-        if (comi && infoDiv) {
-            const fechaLimpia = (comi.fechaAlta && comi.fechaAlta.includes('T')) ? comi.fechaAlta.split('T')[0] : (comi.fechaAlta || '-');
-            infoDiv.innerHTML = `<strong>WA:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo} | <strong>Alta:</strong> ${fechaLimpia}`;
+        const comi = listaComisionistas.find(c => c.nombreCompleto === document.getElementById('selectComis').value);
+        if (comi) {
+            const fLimpia = (comi.fechaAlta && comi.fechaAlta.includes('T')) ? comi.fechaAlta.split('T')[0] : (comi.fechaAlta || '-');
+            document.getElementById('detalleComis').innerHTML = `<strong>WA:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo} | <strong>Alta:</strong> ${fLimpia}`;
         }
     }
 
@@ -234,149 +295,70 @@
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
-        btn.innerText = "Guardando...";
 
         let origenFinal = document.getElementById('origen').value;
         let fAltaComi = "-";
-
         if (origenFinal === 'Comisionista') {
-            const nombreComis = document.getElementById('selectComis').value;
-            origenFinal = "Comisionista: " + nombreComis;
-            const cData = listaComisionistas.find(c => c.nombreCompleto === nombreComis);
+            origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
+            const cData = listaComisionistas.find(c => c.nombreCompleto === document.getElementById('selectComis').value);
             if(cData) fAltaComi = cData.fechaAlta || '-';
         }
 
-        const fechaHoy = new Date().toLocaleDateString('en-CA');
-
+        const hoy = new Date().toLocaleDateString('en-CA');
         const datos = {
-            nombre: document.getElementById('nombre').value,
-            celular: document.getElementById('celular').value,
-            email: document.getElementById('email').value,
-            origen: origenFinal,
+            nombre: document.getElementById('nombre').value, celular: document.getElementById('celular').value,
+            email: document.getElementById('email').value, origen: origenFinal,
             comentarios: document.getElementById('comentarios').value,
-            fAltaComi: fAltaComi,
-            fAltaLead: fechaHoy,
-            fUltContacto: fechaHoy
+            fAltaComi: fAltaComi, fAltaLead: hoy, fUltContacto: hoy
         };
 
         try {
-            // Guardar en Firestore (Colección 'leads')
             await db.collection('leads').add(datos);
-            
-            alert("Lead guardado con éxito.");
             document.getElementById('leadForm').reset();
             toggleComisionistas();
-            cargarTodo(); // Recargar tabla
-        } catch (err) {
-            console.error("Error al guardar:", err);
-            alert("Error al guardar en la base de datos.");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Guardar Lead";
-        }
+            cargarTodo();
+        } catch (err) { alert("Error guardando."); } 
+        finally { btn.disabled = false; }
     });
 
-    // ==========================================
-    // 5. LÓGICA DE SEGUIMIENTO (EDICIÓN Y ACTUALIZACIÓN)
-    // ==========================================
     function prepararSeguimiento(lead) {
-        leadEditandoId = lead.id; // ID único de Firebase
-        
+        leadEditandoId = lead.id;
         document.getElementById('historialViejo').value = lead.comentarios || "";
-        const fechaVieja = (lead.fUltContacto && lead.fUltContacto.includes('T')) ? lead.fUltContacto.split('T')[0] : (lead.fUltContacto || "");
-        document.getElementById('fechaContactoVieja').value = fechaVieja;
-
+        document.getElementById('fechaContactoVieja').value = (lead.fUltContacto && lead.fUltContacto.includes('T')) ? lead.fUltContacto.split('T')[0] : (lead.fUltContacto || "");
         document.getElementById('editNombre').value = lead.nombre || "";
         document.getElementById('editCelular').value = lead.celular || "";
         document.getElementById('editEmail').value = lead.email || "";
-        
         document.getElementById('nuevoComentario').value = ""; 
         miModal.show();
     }
 
     async function guardarSeguimiento() {
         if (!leadEditandoId) return;
-
         const btn = document.querySelector('#modalSeguimiento .btn-primary');
         btn.disabled = true;
-        btn.innerText = "Guardando...";
 
         const nuevoComentario = document.getElementById('nuevoComentario').value;
         const historialPrevio = document.getElementById('historialViejo').value;
-        const fechaHoy = new Date().toLocaleDateString('es-AR');
-
         let historialActualizado = historialPrevio;
         let fechaActualizada = document.getElementById('fechaContactoVieja').value;
 
         if (nuevoComentario.trim() !== "") {
-            historialActualizado = `[${fechaHoy}]: ${nuevoComentario}\n${historialPrevio}`;
+            historialActualizado = `[${new Date().toLocaleDateString('es-AR')}]: ${nuevoComentario}\n${historialPrevio}`;
             fechaActualizada = new Date().toLocaleDateString('en-CA');
         }
 
-        const datosActualizados = {
-            nombre: document.getElementById('editNombre').value,
-            celular: document.getElementById('editCelular').value,
-            email: document.getElementById('editEmail').value,
-            comentarios: historialActualizado,
-            fUltContacto: fechaActualizada
+        const datos = {
+            nombre: document.getElementById('editNombre').value, celular: document.getElementById('editCelular').value,
+            email: document.getElementById('editEmail').value, comentarios: historialActualizado, fUltContacto: fechaActualizada
         };
 
         try {
-            // Actualizar documento específico en Firestore
-            await db.collection('leads').doc(leadEditandoId).update(datosActualizados);
-            
-            alert("¡Cambios guardados correctamente!");
+            await db.collection('leads').doc(leadEditandoId).update(datos);
             miModal.hide();
             cargarTodo();
-        } catch (error) {
-            console.error("Error al actualizar:", error);
-            alert("No se pudieron guardar los cambios.");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Guardar Cambios";
-            leadEditandoId = null;
-        }
+        } catch (error) { alert("Error actualizando."); } 
+        finally { btn.disabled = false; leadEditandoId = null; }
     }
 </script>
-<div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title">Editar Lead y Seguimiento</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="originalEmail">
-        <input type="hidden" id="historialViejo">
-        <input type="hidden" id="fechaContactoVieja">
-
-        <div class="mb-2">
-            <label class="form-label small fw-bold text-secondary mb-0">Nombre / Razón Social</label>
-            <input type="text" id="editNombre" class="form-control form-control-sm">
-        </div>
-        <div class="row mb-3">
-            <div class="col-6">
-                <label class="form-label small fw-bold text-secondary mb-0">Celular</label>
-                <input type="tel" id="editCelular" class="form-control form-control-sm">
-            </div>
-            <div class="col-6">
-                <label class="form-label small fw-bold text-secondary mb-0">Email</label>
-                <input type="email" id="editEmail" class="form-control form-control-sm">
-            </div>
-        </div>
-        
-        <hr>
-        <label class="form-label fw-bold">Nuevo Avance / Comentario:</label>
-        <textarea id="nuevoComentario" class="form-control" rows="3" placeholder="Si hablaste con el cliente hoy, escríbelo aquí..."></textarea>
-        <small class="text-muted" style="font-size: 0.7rem;">(Si solo corriges datos arriba, deja esto en blanco)</small>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="guardarSeguimiento()">Guardar Cambios</button>
-      </div>
-    </div>
-  </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
