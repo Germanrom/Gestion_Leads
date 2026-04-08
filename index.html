@@ -167,51 +167,76 @@
     let miModal;
     let leadEditandoId = null;
 
+// ==========================================
+    // 5. LÓGICA DE AUTENTICACIÓN Y VALIDACIÓN EN BBDD
     // ==========================================
-    // 5. LÓGICA DE AUTENTICACIÓN (LOGIN)
-    // ==========================================
+
     // Observador de estado de sesión
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(async (user) => {
         const divLogin = document.getElementById('pantallaLogin');
         const divCRM = document.getElementById('pantallaCRM');
+        const errorDiv = document.getElementById('loginError');
 
         if (user) {
-            // Usuario logueado: Ocultamos login, mostramos CRM y cargamos datos
-            divLogin.style.display = 'none';
-            divCRM.style.display = 'block';
-            iniciarCRM();
+            // 1. El usuario se logueó con Google. Ahora verificamos en Firestore.
+            const emailMinuscula = user.email.toLowerCase();
+            
+            try {
+                const doc = await db.collection('usuarios_autorizados').doc(emailMinuscula).get();
+                
+                if (doc.exists) {
+                    // ¡Está en la lista VIP! Le damos acceso.
+                    divLogin.style.display = 'none';
+                    divCRM.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    iniciarCRM();
+                } else {
+                    // No está en la base de datos de autorizados. Lo expulsamos.
+                    auth.signOut();
+                    errorDiv.innerText = `Acceso denegado: El correo ${emailMinuscula} no está registrado en la base de datos de socios.`;
+                    errorDiv.style.display = 'block';
+                    divLogin.style.display = 'block';
+                    divCRM.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error al verificar permisos:", error);
+                errorDiv.innerText = "Error al conectar con la base de datos de permisos.";
+                errorDiv.style.display = 'block';
+            }
+            
         } else {
-            // No hay usuario: Mostramos login
+            // No hay nadie logueado
             divLogin.style.display = 'block';
             divCRM.style.display = 'none';
         }
     });
 
-    // Evento de Login
-    document.getElementById('formLogin').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const pass = document.getElementById('loginPass').value;
-        const btn = document.getElementById('btnLogin');
+    // Evento del Botón de Google
+    document.getElementById('btnGoogleLogin').addEventListener('click', async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
         const errorDiv = document.getElementById('loginError');
+        const btn = document.getElementById('btnGoogleLogin');
         
-        btn.disabled = true;
-        btn.innerText = "Verificando...";
         errorDiv.style.display = 'none';
+        btn.disabled = true;
+        btn.innerHTML = "Verificando identidad...";
 
         try {
-            await auth.signInWithEmailAndPassword(email, pass);
-            // Si el login es exitoso, el onAuthStateChanged se activa solo
+            await auth.signInWithPopup(provider);
         } catch (error) {
-            errorDiv.innerText = "Credenciales incorrectas. Verifica tu email y contraseña.";
+            console.error(error);
+            errorDiv.innerText = "Se canceló el inicio de sesión o hubo un error de red.";
             errorDiv.style.display = 'block';
             btn.disabled = false;
-            btn.innerText = "Entrar al CRM";
+            btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 20px; margin-right: 10px;"> Continuar con Google`;
         }
     });
 
     function cerrarSesion() {
         auth.signOut();
+        // Restauramos el botón visualmente al salir
+        document.getElementById('btnGoogleLogin').innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 20px; margin-right: 10px;"> Continuar con Google`;
+        document.getElementById('btnGoogleLogin').disabled = false;
     }
 
     // ==========================================
