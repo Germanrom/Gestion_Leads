@@ -12,7 +12,7 @@
         
         /* CSS para el scroll de seguimiento de los comisionistas */
         .scroll-seguimiento {
-            max-height: 7.5em; /* Aprox 5 líneas */
+            max-height: 8.5em; /* Ligeramente más grande para acomodar la nueva fecha */
             overflow-y: auto;
             background-color: #f8f9fa;
             padding: 12px;
@@ -45,10 +45,13 @@
 <div id="pantallaCRM" class="container crm-container" style="display: none;">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary m-0">Panel de Gestión de Leads</h2>
-        <div>
-            <span id="badgeRol" class="badge bg-secondary me-2">Cargando rol...</span>
-            <button class="btn btn-outline-danger btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
+        <h2 class="text-primary m-0">Panel de Gestión</h2>
+        <div class="d-flex align-items-center">
+            <div class="text-end me-3 d-none d-md-block">
+                <div id="infoUsuarioNombre" class="fw-bold text-dark" style="font-size: 0.95rem;">Cargando...</div>
+                <div id="infoUsuarioEmail" class="text-muted" style="font-size: 0.8rem;"></div>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" onclick="cerrarSesion()">Salir</button>
         </div>
     </div>
 
@@ -192,8 +195,10 @@
                     usuarioActualEmail = emailMinuscula;
                     usuarioActualRol = doc.data().rol || 'comisionista';
                     
-                    document.getElementById('badgeRol').innerText = `Rol: ${usuarioActualRol.toUpperCase()}`;
-                    document.getElementById('badgeRol').className = usuarioActualRol === 'admin' ? 'badge bg-danger me-2' : 'badge bg-info text-dark me-2';
+                    // CARGAR DATOS DEL USUARIO EN LA INTERFAZ
+                    const nombreUsuario = user.displayName || 'Socio / Comisionista';
+                    document.getElementById('infoUsuarioNombre').innerText = nombreUsuario;
+                    document.getElementById('infoUsuarioEmail').innerText = usuarioActualEmail;
 
                     ajustarInterfazPorRol();
 
@@ -242,18 +247,17 @@
         const thead = document.getElementById('theadLeads');
 
         if (usuarioActualRol !== 'admin') {
-            // VISTA COMISIONISTA
+            // VISTA COMISIONISTA (3 Columnas)
             divContenedorOrigen.style.display = 'none';
             thead.innerHTML = `
                 <tr>
                     <th>Cliente y Email</th>
                     <th>Celular</th>
-                    <th>Último Contacto</th>
                     <th class="text-center">Acción</th>
                 </tr>
             `;
         } else {
-            // VISTA ADMIN
+            // VISTA ADMIN (5 Columnas)
             divContenedorOrigen.style.display = 'block';
             thead.innerHTML = `
                 <tr>
@@ -298,7 +302,7 @@
         tbody.innerHTML = '';
 
         if (leads.length === 0) {
-            const spanCols = usuarioActualRol === 'admin' ? 5 : 4;
+            const spanCols = usuarioActualRol === 'admin' ? 5 : 3;
             tbody.innerHTML = `<tr><td colspan="${spanCols}" class="text-center">No hay leads para mostrar</td></tr>`;
             return;
         }
@@ -313,6 +317,7 @@
             const jsonLead = JSON.stringify(l).replace(/'/g, "&apos;");
 
             if (usuarioActualRol === 'admin') {
+                // ADMIN: 5 Columnas
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || ''}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
@@ -327,11 +332,11 @@
                         </td>
                     </tr>`;
             } else {
+                // COMISIONISTA: 3 Columnas y Seguimiento Integrado
                 tbody.innerHTML += `
                     <tr style="border-bottom: none;">
                         <td class="border-bottom-0"><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || 'Sin email'}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
                         <td class="border-bottom-0 align-middle">${l.celular}</td>
-                        <td class="border-bottom-0 align-middle"><span class="badge bg-secondary">${fCont}</span></td>
                         <td class="text-center border-bottom-0 align-middle">
                             <div class="d-flex justify-content-center gap-1">
                                 <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
@@ -340,8 +345,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="4" class="p-0 border-bottom">
+                        <td colspan="3" class="p-0 border-bottom">
                             <div class="scroll-seguimiento mx-2 mb-3 shadow-sm">
+                                <span class="badge bg-primary mb-1">Último Contacto: ${fCont}</span><br>
                                 <strong>Historial de Seguimiento:</strong><br>${l.comentarios || 'Aún no hay comentarios.'}
                             </div>
                         </td>
