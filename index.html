@@ -10,29 +10,10 @@
         .crm-container { margin-top: 20px; max-width: 1000px; }
         .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
         
-        .caja-historial {
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #0d6efd;
-            padding: 0;
-        }
-        
-        .tabla-interna-historial {
-            width: 100%;
-            margin-bottom: 0;
-            font-size: 0.85rem;
-        }
-        .tabla-interna-historial td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .tabla-interna-historial tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Estilos para las pestañas de navegación */
+        .caja-historial { max-height: 200px; overflow-y: auto; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid #0d6efd; padding: 0; }
+        .tabla-interna-historial { width: 100%; margin-bottom: 0; font-size: 0.85rem; }
+        .tabla-interna-historial td { padding: 8px 12px; border-bottom: 1px solid #e9ecef; }
+        .tabla-interna-historial tr:last-child td { border-bottom: none; }
         .nav-tabs .nav-link { color: #495057; border-radius: 8px 8px 0 0; }
         .nav-tabs .nav-link.active { color: #0d6efd; font-weight: bold; border-bottom-color: transparent; }
     </style>
@@ -44,12 +25,10 @@
         <div class="card-body p-5 text-center">
             <h3 class="text-primary mb-3">FivePeaks CRM</h3>
             <p class="text-muted mb-4 small">Acceso exclusivo para socios autorizados.</p>
-            
             <button id="btnGoogleLogin" class="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center py-2">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 20px; margin-right: 10px;">
                 Continuar con Google
             </button>
-            
             <div id="loginError" class="text-danger mt-3 text-center small fw-bold" style="display:none;"></div>
         </div>
     </div>
@@ -68,14 +47,17 @@
         </div>
     </div>
 
-    <ul class="nav nav-tabs mb-4" id="menuTabs" style="display: none;">
-        <li class="nav-item">
-            <a class="nav-link active" id="tabLeads" href="#" onclick="cambiarPestana('leads')">💼 Gestión de Leads</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="tabComis" href="#" onclick="cambiarPestana('comis')">👥 Socios y Comisionistas</a>
-        </li>
-    </ul>
+    <div class="d-flex justify-content-between align-items-end mb-4 border-bottom" id="contenedorTabs" style="display: none !important;">
+        <ul class="nav nav-tabs border-bottom-0" id="menuTabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="tabLeads" href="#" onclick="cambiarPestana('leads')">💼 Gestión de Leads</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tabComis" href="#" onclick="cambiarPestana('comis')">👥 Socios y Comisionistas</a>
+            </li>
+        </ul>
+        <button id="btnExportar" class="btn btn-success btn-sm mb-2" onclick="exportarExcel()">📥 Descargar Excel</button>
+    </div>
 
     <div id="vistaLeads">
         <div class="card mb-4 shadow-sm">
@@ -135,27 +117,29 @@
                 </table>
             </div>
         </div>
-    </div> <div id="vistaComis" style="display: none;">
+    </div>
+
+    <div id="vistaComis" style="display: none;">
         <div class="card mb-4 shadow-sm border-info">
             <div class="card-header bg-info text-dark fw-bold">Dar de Alta a un Nuevo Socio / Comisionista</div>
             <div class="card-body">
                 <form id="formComisionista" class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Nombre Completo</label>
-                        <input type="text" id="comiNombre" class="form-control" placeholder="Ej: Juan Pérez" required>
+                        <input type="text" id="comiNombre" class="form-control" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Celular (WhatsApp)</label>
-                        <input type="tel" id="comiCelular" class="form-control" placeholder="Ej: +54911..." required>
+                        <input type="tel" id="comiCelular" class="form-control" required>
                     </div>
                     <div class="col-md-5">
                         <label class="form-label fw-bold text-primary">Email (IMPORTANTE)</label>
-                        <input type="email" id="comiEmail" class="form-control border-primary" placeholder="Correo con el que iniciará sesión en Google" required>
+                        <input type="email" id="comiEmail" class="form-control border-primary" required>
                         <small class="text-muted">Este correo se habilitará automáticamente para entrar al CRM.</small>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Detalles del Acuerdo / Porcentaje</label>
-                        <input type="text" id="comiAcuerdo" class="form-control" placeholder="Ej: 15% por venta concretada" required>
+                        <input type="text" id="comiAcuerdo" class="form-control" required>
                     </div>
                     <div class="col-12 mt-4">
                         <button type="submit" class="btn btn-info px-5 fw-bold text-dark">Registrar Comisionista</button>
@@ -174,24 +158,34 @@
                             <th>Contacto</th>
                             <th>Acuerdo</th>
                             <th>Fecha de Alta</th>
+                            <th class="text-center">Acción</th>
                         </tr>
                     </thead>
                     <tbody id="tablaComisionistasListado">
-                        <tr><td colspan="4" class="text-center">Cargando socios...</td></tr>
+                        <tr><td colspan="5" class="text-center">Cargando socios...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div> </div> <div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
+    </div>
+
+</div>
+
+<div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">Editar Lead y Agregar Seguimiento</h5>
+                <h5 class="modal-title">Editar Lead / Reasignar</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="historialViejo">
                 <input type="hidden" id="fechaContactoVieja">
+
+                <div id="divReasignar" class="mb-3 p-3 bg-light border rounded" style="display: none;">
+                    <label class="form-label small fw-bold text-danger mb-1">Reasignar Propietario del Lead:</label>
+                    <select id="editCreador" class="form-select form-select-sm border-danger"></select>
+                </div>
 
                 <div class="mb-2">
                     <label class="form-label small fw-bold text-secondary mb-0">Nombre</label>
@@ -213,7 +207,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary px-4" onclick="guardarSeguimiento()">Guardar</button>
+                <button type="button" class="btn btn-primary px-4" onclick="guardarSeguimiento()">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -226,7 +220,7 @@
 
 <script>
     // ==========================================
-    // 4. CONFIGURACIÓN FIREBASE
+    // CONFIGURACIÓN FIREBASE
     // ==========================================
     const firebaseConfig = {
         apiKey: "AIzaSyCbIv0A_rTWcG7-oQnwqwn4an3GySo8Jqg",
@@ -249,7 +243,7 @@
     let usuarioActualRol = null;
 
     // ==========================================
-    // 5. LÓGICA DE AUTENTICACIÓN
+    // AUTENTICACIÓN
     // ==========================================
     auth.onAuthStateChanged(async (user) => {
         const divLogin = document.getElementById('pantallaLogin');
@@ -264,8 +258,7 @@
                     usuarioActualEmail = emailMinuscula;
                     usuarioActualRol = doc.data().rol || 'comisionista';
                     
-                    const nombreUsuario = user.displayName || 'Socio / Comisionista';
-                    document.getElementById('infoUsuarioNombre').innerText = nombreUsuario;
+                    document.getElementById('infoUsuarioNombre').innerText = user.displayName || 'Socio / Comisionista';
                     document.getElementById('infoUsuarioEmail').innerText = usuarioActualEmail;
 
                     ajustarInterfazPorRol();
@@ -276,12 +269,12 @@
                     iniciarCRM();
                 } else {
                     auth.signOut();
-                    errorDiv.innerText = `Acceso denegado: El correo ${emailMinuscula} no está autorizado.`;
+                    errorDiv.innerText = `Acceso denegado: El correo no está autorizado.`;
                     errorDiv.style.display = 'block';
                     divLogin.style.display = 'block';
                     divCRM.style.display = 'none';
                 }
-            } catch (error) { console.error("Error al verificar permisos:", error); }
+            } catch (error) { console.error("Error permisos:", error); }
         } else {
             divLogin.style.display = 'block';
             divCRM.style.display = 'none';
@@ -290,32 +283,22 @@
 
     document.getElementById('btnGoogleLogin').addEventListener('click', async () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        const btn = document.getElementById('btnGoogleLogin');
-        btn.disabled = true;
-        btn.innerHTML = "Verificando...";
-        try {
-            await auth.signInWithPopup(provider);
-        } catch (error) {
-            btn.disabled = false;
-            btn.innerHTML = `Continuar con Google`;
-        }
+        document.getElementById('btnGoogleLogin').innerText = "Verificando...";
+        try { await auth.signInWithPopup(provider); } 
+        catch (error) { document.getElementById('btnGoogleLogin').innerHTML = `Continuar con Google`; }
     });
 
     function cerrarSesion() {
         auth.signOut();
-        document.getElementById('btnGoogleLogin').disabled = false;
         document.getElementById('btnGoogleLogin').innerHTML = `Continuar con Google`;
     }
 
     // ==========================================
-    // 6. CONTROL DE PESTAÑAS Y VISTAS
+    // TABS Y VISTAS
     // ==========================================
     function cambiarPestana(pestana) {
-        // Control visual de los Tabs
         document.getElementById('tabLeads').className = pestana === 'leads' ? 'nav-link active' : 'nav-link';
         document.getElementById('tabComis').className = pestana === 'comis' ? 'nav-link active' : 'nav-link';
-        
-        // Control de los Divs de contenido
         document.getElementById('vistaLeads').style.display = pestana === 'leads' ? 'block' : 'none';
         document.getElementById('vistaComis').style.display = pestana === 'comis' ? 'block' : 'none';
     }
@@ -323,52 +306,36 @@
     function ajustarInterfazPorRol() {
         const divContenedorOrigen = document.getElementById('divContenedorOrigen');
         const thead = document.getElementById('theadLeads');
-        const menuTabs = document.getElementById('menuTabs');
+        const contenedorTabs = document.getElementById('contenedorTabs');
 
         if (usuarioActualRol !== 'admin') {
-            // VISTA COMISIONISTA
-            menuTabs.style.display = 'none'; // Oculta las pestañas
-            cambiarPestana('leads'); // Fuerza a ver la pantalla de leads
+            contenedorTabs.style.setProperty('display', 'none', 'important');
+            cambiarPestana('leads'); 
             divContenedorOrigen.style.display = 'none';
             thead.innerHTML = `
-                <tr>
-                    <th style="width: 40%;">Cliente y Contacto</th>
-                    <th style="width: 30%;">Celular</th>
-                    <th style="width: 30%;" class="text-center">Acciones</th>
-                </tr>
+                <tr><th style="width:40%;">Cliente</th><th style="width:30%;">Celular</th><th style="width:30%;" class="text-center">Acciones</th></tr>
             `;
         } else {
-            // VISTA ADMIN
-            menuTabs.style.display = 'flex'; // Muestra las pestañas
+            contenedorTabs.style.setProperty('display', 'flex', 'important');
             divContenedorOrigen.style.display = 'block';
             thead.innerHTML = `
-                <tr>
-                    <th style="width: 30%;">Cliente y Contacto</th>
-                    <th style="width: 25%;">Celular</th>
-                    <th style="width: 25%;">Origen / Creador</th>
-                    <th style="width: 20%;" class="text-center">Acciones</th>
-                </tr>
+                <tr><th style="width:25%;">Cliente</th><th style="width:20%;">Celular</th><th style="width:25%;">Origen</th><th style="width:30%;" class="text-center">Acciones</th></tr>
             `;
         }
     }
 
     // ==========================================
-    // 7. LÓGICA DE DATOS (LEADS Y COMISIONISTAS)
+    // CARGA DE DATOS
     // ==========================================
     function generarTablaHistorial(comentariosRaw) {
-        if (!comentariosRaw || comentariosRaw.trim() === '') {
-            return `<div class="p-2 text-muted fst-italic small">Aún no hay interacciones registradas.</div>`;
-        }
+        if (!comentariosRaw || comentariosRaw.trim() === '') return `<div class="p-2 text-muted fst-italic small">Sin interacciones.</div>`;
         const lineas = comentariosRaw.split('\n');
         let filas = '';
         lineas.forEach(linea => {
             if (linea.trim() === '') return;
             const match = linea.match(/^\[(.*?)\]:\s*(.*)$/);
-            if (match) {
-                filas += `<tr><td style="width: 15%; min-width: 100px;" class="fw-bold text-secondary border-end">${match[1]}</td><td class="text-wrap">${match[2]}</td></tr>`;
-            } else {
-                filas += `<tr><td colspan="2" class="text-wrap text-muted">${linea}</td></tr>`;
-            }
+            if (match) filas += `<tr><td style="width: 15%; min-width: 100px;" class="fw-bold text-secondary border-end">${match[1]}</td><td class="text-wrap">${match[2]}</td></tr>`;
+            else filas += `<tr><td colspan="2" class="text-wrap text-muted">${linea}</td></tr>`;
         });
         return `<table class="tabla-interna-historial">${filas}</table>`;
     }
@@ -381,58 +348,45 @@
 
     async function cargarTodo() {
         try {
-            // Carga de Comisionistas (Solo Admin lo procesa visualmente, pero se carga global)
             const comiSnap = await db.collection('comisionistas').get();
             listaComisionistas = comiSnap.docs.map(d => ({id: d.id, ...d.data()}));
             
             if (usuarioActualRol === 'admin') {
-                // 1. Llenar el Dropdown (Select)
                 const selectComis = document.getElementById('selectComis');
                 if(selectComis) selectComis.innerHTML = listaComisionistas.map(c => `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`).join('');
-                
-                // 2. Llenar la Tabla de la pestaña Comisionistas
                 renderizarTablaComisionistas(listaComisionistas);
             }
 
-            // Carga de Leads
             let leadsQuery = db.collection('leads');
-            if (usuarioActualRol !== 'admin') {
-                leadsQuery = leadsQuery.where('creador', '==', usuarioActualEmail);
-            }
+            if (usuarioActualRol !== 'admin') leadsQuery = leadsQuery.where('creador', '==', usuarioActualEmail);
+            
             const leadsSnap = await leadsQuery.get();
             listaLeads = leadsSnap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarTabla(listaLeads);
-
-        } catch (error) { console.error("Error cargando datos:", error); }
+        } catch (error) { console.error("Error cargando:", error); }
     }
 
     // ==========================================
-    // RENDERIZADOS DE TABLAS
+    // RENDERIZADO
     // ==========================================
     function renderizarTablaComisionistas(comisionistas) {
         const tbody = document.getElementById('tablaComisionistasListado');
         tbody.innerHTML = '';
-        
-        if (comisionistas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4">No hay socios registrados</td></tr>`;
-            return;
-        }
+        if (comisionistas.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center">No hay socios</td></tr>`; return; }
 
         comisionistas.forEach(c => {
             const fLimpia = (c.fechaAlta && c.fechaAlta.includes('T')) ? c.fechaAlta.split('T')[0] : (c.fechaAlta || '-');
             const celLink = c.celular ? c.celular.toString().replace(/\D/g, '') : '';
-            
             tbody.innerHTML += `
                 <tr>
                     <td><strong>${c.nombreCompleto}</strong></td>
-                    <td>
-                        <div class="small">${c.email}</div>
-                        <a href="https://wa.me/${celLink}" target="_blank" class="text-success text-decoration-none small">💬 ${c.celular}</a>
-                    </td>
+                    <td><div class="small">${c.email}</div><a href="https://wa.me/${celLink}" target="_blank" class="text-success text-decoration-none small">💬 ${c.celular}</a></td>
                     <td><span class="badge bg-light text-dark border">${c.acuerdo}</span></td>
                     <td class="text-muted small">${fLimpia}</td>
-                </tr>
-            `;
+                    <td class="text-center">
+                        <button class="btn btn-danger btn-sm" onclick="eliminarComisionista('${c.id}', '${c.email}')" title="Eliminar Socio">🗑️</button>
+                    </td>
+                </tr>`;
         });
     }
 
@@ -440,11 +394,7 @@
         const tbody = document.getElementById('tablaLeads');
         tbody.innerHTML = '';
         const spanCols = usuarioActualRol === 'admin' ? 4 : 3;
-
-        if (leads.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${spanCols}" class="text-center py-4">No hay leads para mostrar</td></tr>`;
-            return;
-        }
+        if (leads.length === 0) { tbody.innerHTML = `<tr><td colspan="${spanCols}" class="text-center">No hay leads</td></tr>`; return; }
 
         leads.sort((a, b) => new Date(b.fAltaLead || 0) - new Date(a.fAltaLead || 0));
 
@@ -453,7 +403,6 @@
             const badgeClass = (l.origen && l.origen.includes('Comi')) ? 'bg-warning text-dark' : 'bg-info text-dark';
             const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
             const jsonLead = JSON.stringify(l).replace(/'/g, "&apos;");
-            
             const tablaHistorialVisual = generarTablaHistorial(l.comentarios);
 
             if (usuarioActualRol === 'admin') {
@@ -464,19 +413,14 @@
                         <td class="pb-1 align-middle"><span class="badge ${badgeClass}">${l.origen}</span><br><small class="text-muted" style="font-size:0.7rem">Por: ${l.creador || 'Sistema'}</small></td>
                         <td class="text-center pb-1 align-middle">
                             <div class="d-flex justify-content-center gap-1">
-                                <button class="btn btn-outline-secondary btn-sm px-2" type="button" data-bs-toggle="collapse" data-bs-target="#historial-${l.id}" title="Ver Historial">👁️</button>
-                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm px-2" title="WhatsApp">💬</a>
-                                <button class="btn btn-primary btn-sm px-2" onclick='prepararSeguimiento(${jsonLead})' title="Editar / Seguimiento">📝</button>
+                                <button class="btn btn-outline-secondary btn-sm px-2" type="button" data-bs-toggle="collapse" data-bs-target="#historial-${l.id}">👁️</button>
+                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm px-2">💬</a>
+                                <button class="btn btn-primary btn-sm px-2" onclick='prepararSeguimiento(${jsonLead})'>📝</button>
+                                <button class="btn btn-danger btn-sm px-2" onclick="eliminarLead('${l.id}')">🗑️</button>
                             </div>
                         </td>
                     </tr>
-                    <tr class="border-bottom">
-                        <td colspan="${spanCols}" class="p-0 border-0">
-                            <div class="collapse" id="historial-${l.id}">
-                                <div class="caja-historial mx-2 mb-3 mt-2 shadow-sm">${tablaHistorialVisual}</div>
-                            </div>
-                        </td>
-                    </tr>`;
+                    <tr class="border-bottom"><td colspan="${spanCols}" class="p-0 border-0"><div class="collapse" id="historial-${l.id}"><div class="caja-historial mx-2 mb-3 mt-2 shadow-sm">${tablaHistorialVisual}</div></div></td></tr>`;
             } else {
                 tbody.innerHTML += `
                     <tr style="background-color: #fff;">
@@ -484,67 +428,81 @@
                         <td class="pb-1 align-middle fw-bold text-dark">${l.celular}</td>
                         <td class="text-center pb-1 align-middle">
                             <div class="d-flex justify-content-center gap-1">
-                                <button class="btn btn-outline-secondary btn-sm px-2" type="button" data-bs-toggle="collapse" data-bs-target="#historial-${l.id}" title="Ver Historial">👁️</button>
-                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm px-2" title="WhatsApp">💬</a>
-                                <button class="btn btn-primary btn-sm px-2" onclick='prepararSeguimiento(${jsonLead})' title="Agregar Avance">📝</button>
+                                <button class="btn btn-outline-secondary btn-sm px-2" type="button" data-bs-toggle="collapse" data-bs-target="#historial-${l.id}">👁️</button>
+                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm px-2">💬</a>
+                                <button class="btn btn-primary btn-sm px-2" onclick='prepararSeguimiento(${jsonLead})'>📝</button>
                             </div>
                         </td>
                     </tr>
-                    <tr class="border-bottom">
-                        <td colspan="${spanCols}" class="p-0 border-0">
-                            <div class="collapse" id="historial-${l.id}">
-                                <div class="caja-historial mx-2 mb-3 mt-2 shadow-sm">${tablaHistorialVisual}</div>
-                            </div>
-                        </td>
-                    </tr>`;
+                    <tr class="border-bottom"><td colspan="${spanCols}" class="p-0 border-0"><div class="collapse" id="historial-${l.id}"><div class="caja-historial mx-2 mb-3 mt-2 shadow-sm">${tablaHistorialVisual}</div></div></td></tr>`;
             }
         });
     }
 
     // ==========================================
-    // 8. FORMULARIOS (GUARDAR LEADS Y COMISIONISTAS)
+    // FUNCIONES NUEVAS: ELIMINAR Y EXPORTAR
     // ==========================================
-    
-    // --> GUARDAR NUEVO COMISIONISTA
+    async function eliminarLead(id) {
+        if(confirm("¿Seguro que deseas eliminar este lead? Esta acción no se puede deshacer.")) {
+            try { await db.collection('leads').doc(id).delete(); cargarTodo(); } 
+            catch (e) { alert("Error al eliminar."); }
+        }
+    }
+
+    async function eliminarComisionista(id, email) {
+        if(confirm("¿Seguro que deseas eliminar a este socio? Perderá instantáneamente su acceso al sistema y no podrá ver sus leads.")) {
+            try {
+                await db.collection('comisionistas').doc(id).delete();
+                await db.collection('usuarios_autorizados').doc(email).delete(); // Revoca el permiso de Google
+                cargarTodo();
+            } catch (e) { alert("Error al eliminar socio."); }
+        }
+    }
+
+    function exportarExcel() {
+        // Formato CSV con BOM para que Excel lea los acentos y las ñ correctamente
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "Nombre,Celular,Email,Origen,Creador,Ultimo_Contacto,Comentarios\n";
+        
+        listaLeads.forEach(l => {
+            // Limpiamos saltos de línea y comillas dobles para que el Excel no se rompa
+            let coms = (l.comentarios || "").replace(/\n/g, " | ").replace(/"/g, '""');
+            let row = `"${l.nombre || ''}","${l.celular || ''}","${l.email || ''}","${l.origen || ''}","${l.creador || ''}","${l.fUltContacto || ''}","${coms}"`;
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Leads_CRM_${new Date().toLocaleDateString('es-AR')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // ==========================================
+    // FORMULARIOS (ALTAS Y EDICIONES)
+    // ==========================================
     document.getElementById('formComisionista').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
-        btn.innerText = "Registrando...";
-
         const emailNuevoComi = document.getElementById('comiEmail').value.toLowerCase();
-        const fechaHoy = new Date().toLocaleDateString('en-CA');
-
         const datosComi = {
             nombreCompleto: document.getElementById('comiNombre').value,
-            celular: document.getElementById('comiCelular').value,
-            email: emailNuevoComi,
-            acuerdo: document.getElementById('comiAcuerdo').value,
-            fechaAlta: fechaHoy
+            celular: document.getElementById('comiCelular').value, email: emailNuevoComi,
+            acuerdo: document.getElementById('comiAcuerdo').value, fechaAlta: new Date().toLocaleDateString('en-CA')
         };
-
         try {
-            // 1. Guardamos los datos para el CRM
             await db.collection('comisionistas').add(datosComi);
-            
-            // 2. MAGIA: Le damos acceso automático en la lista VIP
-            await db.collection('usuarios_autorizados').doc(emailNuevoComi).set({
-                rol: 'comisionista'
-            });
-
-            alert("Socio registrado y habilitado para iniciar sesión exitosamente.");
+            await db.collection('usuarios_autorizados').doc(emailNuevoComi).set({ rol: 'comisionista' });
+            alert("Socio registrado con éxito.");
             document.getElementById('formComisionista').reset();
-            cargarTodo(); // Recarga la tabla de socios y el select de leads
-        } catch (err) {
-            console.error(err);
-            alert("Hubo un error al registrar el socio.");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Registrar Comisionista";
-        }
+            cargarTodo();
+        } catch (err) { alert("Error al registrar socio."); } 
+        finally { btn.disabled = false; }
     });
 
-    // --> GUARDAR NUEVO LEAD
     function toggleComisionistas() {
         if (usuarioActualRol !== 'admin') return;
         const origen = document.getElementById('origen').value;
@@ -552,13 +510,10 @@
         div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
         if (origen === 'Comisionista') actualizarDetalleComis();
     }
-
+    
     function actualizarDetalleComis() {
         const comi = listaComisionistas.find(c => c.nombreCompleto === document.getElementById('selectComis').value);
-        if (comi) {
-            const fLimpia = (comi.fechaAlta && comi.fechaAlta.includes('T')) ? comi.fechaAlta.split('T')[0] : (comi.fechaAlta || '-');
-            document.getElementById('detalleComis').innerHTML = `<strong>WA:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo} | <strong>Alta:</strong> ${fLimpia}`;
-        }
+        if (comi) document.getElementById('detalleComis').innerHTML = `<strong>WA:</strong> ${comi.celular} | <strong>Acuerdo:</strong> ${comi.acuerdo}`;
     }
 
     document.getElementById('leadForm').addEventListener('submit', async (e) => {
@@ -569,23 +524,17 @@
         let origenFinal = "Genuino";
         if (usuarioActualRol === 'admin') {
             origenFinal = document.getElementById('origen').value;
-            if (origenFinal === 'Comisionista') {
-                origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
-            }
+            if (origenFinal === 'Comisionista') origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
         } else {
             origenFinal = "Comisionista (Autocargado)";
         }
 
         const hoy = new Date().toLocaleDateString('en-CA');
         const datos = {
-            nombre: document.getElementById('nombre').value, 
-            celular: document.getElementById('celular').value,
-            email: document.getElementById('email').value, 
-            origen: origenFinal,
+            nombre: document.getElementById('nombre').value, celular: document.getElementById('celular').value,
+            email: document.getElementById('email').value, origen: origenFinal,
             comentarios: document.getElementById('comentarios').value,
-            fAltaLead: hoy, 
-            fUltContacto: hoy,
-            creador: usuarioActualEmail
+            fAltaLead: hoy, fUltContacto: hoy, creador: usuarioActualEmail
         };
 
         try {
@@ -597,7 +546,7 @@
         finally { btn.disabled = false; }
     });
 
-    // --> EDICIÓN DE LEADS (SEGUIMIENTO)
+    // --> REASIGNACIÓN Y EDICIÓN
     function prepararSeguimiento(lead) {
         leadEditandoId = lead.id;
         document.getElementById('historialViejo').value = lead.comentarios || "";
@@ -606,6 +555,26 @@
         document.getElementById('editCelular').value = lead.celular || "";
         document.getElementById('editEmail').value = lead.email || "";
         document.getElementById('nuevoComentario').value = ""; 
+
+        // Lógica visual del menú de Reasignación (Solo Admin)
+        const divReasignar = document.getElementById('divReasignar');
+        if (usuarioActualRol === 'admin') {
+            divReasignar.style.display = 'block';
+            const selectCreador = document.getElementById('editCreador');
+            
+            // Opciones: Genuino + Todos los comisionistas
+            let opciones = `<option value="admin">Genuino de Empresa (Tú)</option>`;
+            listaComisionistas.forEach(c => {
+                opciones += `<option value="${c.email}">Socio: ${c.nombreCompleto}</option>`;
+            });
+            selectCreador.innerHTML = opciones;
+            
+            // Si el creador actual es un comisionista, lo seleccionamos. Si no, queda en "admin".
+            selectCreador.value = listaComisionistas.some(c => c.email === lead.creador) ? lead.creador : "admin";
+        } else {
+            divReasignar.style.display = 'none';
+        }
+
         miModal.show();
     }
 
@@ -628,6 +597,21 @@
             nombre: document.getElementById('editNombre').value, celular: document.getElementById('editCelular').value,
             email: document.getElementById('editEmail').value, comentarios: historialActualizado, fUltContacto: fechaActualizada
         };
+
+        // Lógica de Reasignación si es Admin
+        if (usuarioActualRol === 'admin') {
+            const nuevoEmailCreador = document.getElementById('editCreador').value;
+            if (nuevoEmailCreador === 'admin') {
+                datos.creador = usuarioActualEmail;
+                datos.origen = "Genuino";
+            } else {
+                const comiAsignado = listaComisionistas.find(c => c.email === nuevoEmailCreador);
+                if (comiAsignado) {
+                    datos.creador = comiAsignado.email;
+                    datos.origen = "Comisionista: " + comiAsignado.nombreCompleto;
+                }
+            }
+        }
 
         try {
             await db.collection('leads').doc(leadEditandoId).update(datos);
