@@ -10,17 +10,28 @@
         .crm-container { margin-top: 20px; max-width: 1000px; }
         .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
         
-        /* CSS para el scroll de seguimiento de los comisionistas */
-        .scroll-seguimiento {
-            max-height: 8.5em; /* Ligeramente más grande para acomodar la nueva fecha */
+        /* Contenedor del historial estilo tabla */
+        .caja-historial {
+            max-height: 200px; /* Límite de altura con scroll si hay muchos comentarios */
             overflow-y: auto;
             background-color: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
+            border-radius: 6px;
             border-left: 4px solid #0d6efd;
+            padding: 0; /* Quitamos el padding para que la tabla interna llegue a los bordes */
+        }
+        
+        /* Ajuste para la tabla interna del historial */
+        .tabla-interna-historial {
+            width: 100%;
+            margin-bottom: 0;
             font-size: 0.85rem;
-            white-space: pre-wrap;
-            color: #495057;
+        }
+        .tabla-interna-historial td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .tabla-interna-historial tr:last-child td {
+            border-bottom: none;
         }
     </style>
 </head>
@@ -113,10 +124,9 @@
 </div>
 
 <div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg"> <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">Editar Lead</h5>
+                <h5 class="modal-title">Editar Lead y Agregar Seguimiento</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -138,12 +148,12 @@
                     </div>
                 </div>
                 <hr>
-                <label class="form-label fw-bold">Nuevo Avance:</label>
-                <textarea id="nuevoComentario" class="form-control" rows="3"></textarea>
+                <label class="form-label fw-bold text-primary">Nuevo Avance / Interacción:</label>
+                <textarea id="nuevoComentario" class="form-control border-primary" rows="3" placeholder="Escribe aquí el nuevo comentario..."></textarea>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="guardarSeguimiento()">Guardar</button>
+                <button type="button" class="btn btn-primary px-4" onclick="guardarSeguimiento()">Guardar</button>
             </div>
         </div>
     </div>
@@ -180,7 +190,7 @@
     let usuarioActualRol = null;
 
     // ==========================================
-    // 5. LÓGICA DE AUTENTICACIÓN Y ROLES
+    // 5. LÓGICA DE AUTENTICACIÓN
     // ==========================================
     auth.onAuthStateChanged(async (user) => {
         const divLogin = document.getElementById('pantallaLogin');
@@ -195,7 +205,6 @@
                     usuarioActualEmail = emailMinuscula;
                     usuarioActualRol = doc.data().rol || 'comisionista';
                     
-                    // CARGAR DATOS DEL USUARIO EN LA INTERFAZ
                     const nombreUsuario = user.displayName || 'Socio / Comisionista';
                     document.getElementById('infoUsuarioNombre').innerText = nombreUsuario;
                     document.getElementById('infoUsuarioEmail').innerText = usuarioActualEmail;
@@ -224,7 +233,7 @@
         const provider = new firebase.auth.GoogleAuthProvider();
         const btn = document.getElementById('btnGoogleLogin');
         btn.disabled = true;
-        btn.innerHTML = "Verificando identidad...";
+        btn.innerHTML = "Verificando...";
         try {
             await auth.signInWithPopup(provider);
         } catch (error) {
@@ -240,35 +249,67 @@
     }
 
     // ==========================================
-    // 6. LÓGICA DEL CRM (VISTAS SEPARADAS)
+    // 6. LÓGICA DEL CRM
     // ==========================================
     function ajustarInterfazPorRol() {
         const divContenedorOrigen = document.getElementById('divContenedorOrigen');
         const thead = document.getElementById('theadLeads');
 
         if (usuarioActualRol !== 'admin') {
-            // VISTA COMISIONISTA (3 Columnas)
+            // VISTA COMISIONISTA: 3 Columnas base (el historial va debajo a lo ancho)
             divContenedorOrigen.style.display = 'none';
             thead.innerHTML = `
                 <tr>
-                    <th>Cliente y Email</th>
-                    <th>Celular</th>
-                    <th class="text-center">Acción</th>
+                    <th style="width: 40%;">Cliente y Contacto</th>
+                    <th style="width: 30%;">Celular</th>
+                    <th style="width: 30%;" class="text-center">Acciones</th>
                 </tr>
             `;
         } else {
-            // VISTA ADMIN (5 Columnas)
+            // VISTA ADMIN: 4 Columnas base (el historial va debajo a lo ancho)
             divContenedorOrigen.style.display = 'block';
             thead.innerHTML = `
                 <tr>
-                    <th>Cliente y Email</th>
-                    <th>Celular</th>
-                    <th>Origen</th>
-                    <th>Seguimiento</th>
-                    <th class="text-center">Acción</th>
+                    <th style="width: 30%;">Cliente y Contacto</th>
+                    <th style="width: 25%;">Celular</th>
+                    <th style="width: 25%;">Origen / Creador</th>
+                    <th style="width: 20%;" class="text-center">Acciones</th>
                 </tr>
             `;
         }
+    }
+
+    // ==========================================
+    // 7. FUNCIÓN CLAVE: PARSEAR HISTORIAL A TABLA
+    // ==========================================
+    function generarTablaHistorial(comentariosRaw) {
+        if (!comentariosRaw || comentariosRaw.trim() === '') {
+            return `<div class="p-2 text-muted fst-italic small">Aún no hay interacciones registradas.</div>`;
+        }
+
+        const lineas = comentariosRaw.split('\n');
+        let filas = '';
+
+        lineas.forEach(linea => {
+            if (linea.trim() === '') return;
+            
+            // Buscamos si la línea tiene el formato "[Fecha]: Comentario"
+            const match = linea.match(/^\[(.*?)\]:\s*(.*)$/);
+            
+            if (match) {
+                // Si lo encuentra, separa la fecha en una columna y el comentario en otra
+                filas += `
+                    <tr>
+                        <td style="width: 15%; min-width: 100px;" class="fw-bold text-secondary border-end">${match[1]}</td>
+                        <td class="text-wrap">${match[2]}</td>
+                    </tr>`;
+            } else {
+                // Si es un comentario viejo sin fecha estructurada, ocupa toda la fila
+                filas += `<tr><td colspan="2" class="text-wrap text-muted">${linea}</td></tr>`;
+            }
+        });
+
+        return `<table class="tabla-interna-historial">${filas}</table>`;
     }
 
     function iniciarCRM() {
@@ -302,8 +343,8 @@
         tbody.innerHTML = '';
 
         if (leads.length === 0) {
-            const spanCols = usuarioActualRol === 'admin' ? 5 : 3;
-            tbody.innerHTML = `<tr><td colspan="${spanCols}" class="text-center">No hay leads para mostrar</td></tr>`;
+            const spanCols = usuarioActualRol === 'admin' ? 4 : 3;
+            tbody.innerHTML = `<tr><td colspan="${spanCols}" class="text-center py-4">No hay leads para mostrar</td></tr>`;
             return;
         }
 
@@ -315,40 +356,48 @@
             const badgeClass = (l.origen && l.origen.includes('Comi')) ? 'bg-warning text-dark' : 'bg-info text-dark';
             const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
             const jsonLead = JSON.stringify(l).replace(/'/g, "&apos;");
+            
+            // Invocamos la función que transforma el texto en tabla HTML
+            const tablaHistorialVisual = generarTablaHistorial(l.comentarios);
 
             if (usuarioActualRol === 'admin') {
-                // ADMIN: 5 Columnas
+                // ADMIN: 4 Columnas principales + Fila Ancha de Historial
                 tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || ''}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
-                        <td>${l.celular}</td>
-                        <td><span class="badge ${badgeClass}">${l.origen}</span><br><small class="text-muted" style="font-size:0.7rem">Por: ${l.creador || 'Sistema'}</small></td>
-                        <td><div class="fw-bold" style="font-size:0.8rem">Ult: ${fCont}</div><small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.comentarios || '-'}</small></td>
-                        <td class="text-center">
+                    <tr style="border-bottom: none; background-color: #fff;">
+                        <td class="border-bottom-0 pb-1"><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || 'Sin email'}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
+                        <td class="border-bottom-0 pb-1 align-middle">${l.celular}</td>
+                        <td class="border-bottom-0 pb-1"><span class="badge ${badgeClass}">${l.origen}</span><br><small class="text-muted" style="font-size:0.7rem">Por: ${l.creador || 'Sistema'}</small></td>
+                        <td class="text-center border-bottom-0 pb-1 align-middle">
                             <div class="d-flex justify-content-center gap-1">
-                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
-                                <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${jsonLead})'>📝</button>
-                            </div>
-                        </td>
-                    </tr>`;
-            } else {
-                // COMISIONISTA: 3 Columnas y Seguimiento Integrado
-                tbody.innerHTML += `
-                    <tr style="border-bottom: none;">
-                        <td class="border-bottom-0"><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || 'Sin email'}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
-                        <td class="border-bottom-0 align-middle">${l.celular}</td>
-                        <td class="text-center border-bottom-0 align-middle">
-                            <div class="d-flex justify-content-center gap-1">
-                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
-                                <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${jsonLead})'>📝</button>
+                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm px-3">💬 WA</a>
+                                <button class="btn btn-primary btn-sm px-3" onclick='prepararSeguimiento(${jsonLead})'>📝 Editar</button>
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="3" class="p-0 border-bottom">
-                            <div class="scroll-seguimiento mx-2 mb-3 shadow-sm">
-                                <span class="badge bg-primary mb-1">Último Contacto: ${fCont}</span><br>
-                                <strong>Historial de Seguimiento:</strong><br>${l.comentarios || 'Aún no hay comentarios.'}
+                        <td colspan="4" class="pt-0 pb-3 border-bottom">
+                            <div class="caja-historial mx-2 shadow-sm">
+                                ${tablaHistorialVisual}
+                            </div>
+                        </td>
+                    </tr>`;
+            } else {
+                // COMISIONISTA: 3 Columnas principales + Fila Ancha de Historial
+                tbody.innerHTML += `
+                    <tr style="border-bottom: none; background-color: #fff;">
+                        <td class="border-bottom-0 pb-1"><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || 'Sin email'}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
+                        <td class="border-bottom-0 pb-1 align-middle fw-bold text-dark">${l.celular}</td>
+                        <td class="text-center border-bottom-0 pb-1 align-middle">
+                            <div class="d-flex justify-content-center gap-1">
+                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm px-3">💬 WA</a>
+                                <button class="btn btn-primary btn-sm px-3" onclick='prepararSeguimiento(${jsonLead})'>📝 Agregar Avance</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="pt-0 pb-3 border-bottom">
+                            <div class="caja-historial mx-2 shadow-sm">
+                                ${tablaHistorialVisual}
                             </div>
                         </td>
                     </tr>`;
@@ -430,6 +479,7 @@
         let fechaActualizada = document.getElementById('fechaContactoVieja').value;
 
         if (nuevoComentario.trim() !== "") {
+            // Este es el formato exacto "[DD/MM/YYYY]: Texto" que la función de dibujo convertirá en Tabla
             historialActualizado = `[${new Date().toLocaleDateString('es-AR')}]: ${nuevoComentario}\n${historialPrevio}`;
             fechaActualizada = new Date().toLocaleDateString('en-CA');
         }
