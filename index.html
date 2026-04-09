@@ -3,12 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM - Gestión de Leads</title>
+    <title>FivePeaks CRM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f4f7f6; }
         .crm-container { margin-top: 20px; max-width: 1000px; }
         .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
+        
+        /* CSS para el scroll de seguimiento de los comisionistas */
+        .scroll-seguimiento {
+            max-height: 7.5em; /* Aprox 5 líneas */
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #0d6efd;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            color: #495057;
+        }
     </style>
 </head>
 <body>
@@ -33,7 +46,10 @@
     
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary m-0">Panel de Gestión de Leads</h2>
-        <button class="btn btn-outline-danger btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
+        <div>
+            <span id="badgeRol" class="badge bg-secondary me-2">Cargando rol...</span>
+            <button class="btn btn-outline-danger btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
     </div>
 
     <div class="card mb-4">
@@ -53,7 +69,7 @@
                     <input type="email" id="email" class="form-control">
                 </div>
                 
-                <div class="col-md-4">
+                <div class="col-md-4" id="divContenedorOrigen">
                     <label class="form-label">Origen del Lead</label>
                     <select id="origen" class="form-select" onchange="toggleComisionistas()">
                         <option value="Genuino">Genuino de Empresa</option>
@@ -79,17 +95,11 @@
     </div>
 
     <div class="card">
-        <div class="card-header bg-dark text-white">Listado Compartido</div>
+        <div class="card-header bg-dark text-white">Listado de Leads</div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Cliente y Email</th>
-                        <th>Celular</th>
-                        <th>Origen</th>
-                        <th>Seguimiento</th>
-                        <th class="text-center">Acción</th>
-                    </tr>
+                <thead class="table-light" id="theadLeads">
+                    <tr><th>Cargando encabezados...</th></tr>
                 </thead>
                 <tbody id="tablaLeads">
                     <tr><td colspan="5" class="text-center">Cargando datos...</td></tr>
@@ -138,14 +148,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <script>
     // ==========================================
     // 4. CONFIGURACIÓN FIREBASE
     // ==========================================
     const firebaseConfig = {
-        // !!!!!!!! PEGA TU CÓDIGO AQUÍ !!!!!!!!
         apiKey: "AIzaSyCbIv0A_rTWcG7-oQnwqwn4an3GySo8Jqg",
         authDomain: "fivepeaks-crm-leads.firebaseapp.com",
         projectId: "fivepeaks-crm-leads",
@@ -163,81 +173,100 @@
     let miModal;
     let leadEditandoId = null;
 
-// ==========================================
-    // 5. LÓGICA DE AUTENTICACIÓN Y VALIDACIÓN EN BBDD
-    // ==========================================
+    let usuarioActualEmail = null;
+    let usuarioActualRol = null;
 
-    // Observador de estado de sesión
+    // ==========================================
+    // 5. LÓGICA DE AUTENTICACIÓN Y ROLES
+    // ==========================================
     auth.onAuthStateChanged(async (user) => {
         const divLogin = document.getElementById('pantallaLogin');
         const divCRM = document.getElementById('pantallaCRM');
         const errorDiv = document.getElementById('loginError');
 
         if (user) {
-            // 1. El usuario se logueó con Google. Ahora verificamos en Firestore.
             const emailMinuscula = user.email.toLowerCase();
-            
             try {
                 const doc = await db.collection('usuarios_autorizados').doc(emailMinuscula).get();
-                
                 if (doc.exists) {
-                    // ¡Está en la lista VIP! Le damos acceso.
+                    usuarioActualEmail = emailMinuscula;
+                    usuarioActualRol = doc.data().rol || 'comisionista';
+                    
+                    document.getElementById('badgeRol').innerText = `Rol: ${usuarioActualRol.toUpperCase()}`;
+                    document.getElementById('badgeRol').className = usuarioActualRol === 'admin' ? 'badge bg-danger me-2' : 'badge bg-info text-dark me-2';
+
+                    ajustarInterfazPorRol();
+
                     divLogin.style.display = 'none';
                     divCRM.style.display = 'block';
                     errorDiv.style.display = 'none';
                     iniciarCRM();
                 } else {
-                    // No está en la base de datos de autorizados. Lo expulsamos.
                     auth.signOut();
-                    errorDiv.innerText = `Acceso denegado: El correo ${emailMinuscula} no está registrado en la base de datos de socios.`;
+                    errorDiv.innerText = `Acceso denegado: El correo ${emailMinuscula} no está autorizado.`;
                     errorDiv.style.display = 'block';
                     divLogin.style.display = 'block';
                     divCRM.style.display = 'none';
                 }
-            } catch (error) {
-                console.error("Error al verificar permisos:", error);
-                errorDiv.innerText = "Error al conectar con la base de datos de permisos.";
-                errorDiv.style.display = 'block';
-            }
-            
+            } catch (error) { console.error("Error al verificar permisos:", error); }
         } else {
-            // No hay nadie logueado
             divLogin.style.display = 'block';
             divCRM.style.display = 'none';
         }
     });
 
-    // Evento del Botón de Google
     document.getElementById('btnGoogleLogin').addEventListener('click', async () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        const errorDiv = document.getElementById('loginError');
         const btn = document.getElementById('btnGoogleLogin');
-        
-        errorDiv.style.display = 'none';
         btn.disabled = true;
         btn.innerHTML = "Verificando identidad...";
-
         try {
             await auth.signInWithPopup(provider);
         } catch (error) {
-            console.error(error);
-            errorDiv.innerText = "Se canceló el inicio de sesión o hubo un error de red.";
-            errorDiv.style.display = 'block';
             btn.disabled = false;
-            btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 20px; margin-right: 10px;"> Continuar con Google`;
+            btn.innerHTML = `Continuar con Google`;
         }
     });
 
     function cerrarSesion() {
         auth.signOut();
-        // Restauramos el botón visualmente al salir
-        document.getElementById('btnGoogleLogin').innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 20px; margin-right: 10px;"> Continuar con Google`;
         document.getElementById('btnGoogleLogin').disabled = false;
+        document.getElementById('btnGoogleLogin').innerHTML = `Continuar con Google`;
     }
 
     // ==========================================
-    // 6. LÓGICA DEL CRM
+    // 6. LÓGICA DEL CRM (VISTAS SEPARADAS)
     // ==========================================
+    function ajustarInterfazPorRol() {
+        const divContenedorOrigen = document.getElementById('divContenedorOrigen');
+        const thead = document.getElementById('theadLeads');
+
+        if (usuarioActualRol !== 'admin') {
+            // VISTA COMISIONISTA
+            divContenedorOrigen.style.display = 'none';
+            thead.innerHTML = `
+                <tr>
+                    <th>Cliente y Email</th>
+                    <th>Celular</th>
+                    <th>Último Contacto</th>
+                    <th class="text-center">Acción</th>
+                </tr>
+            `;
+        } else {
+            // VISTA ADMIN
+            divContenedorOrigen.style.display = 'block';
+            thead.innerHTML = `
+                <tr>
+                    <th>Cliente y Email</th>
+                    <th>Celular</th>
+                    <th>Origen</th>
+                    <th>Seguimiento</th>
+                    <th class="text-center">Acción</th>
+                </tr>
+            `;
+        }
+    }
+
     function iniciarCRM() {
         const modalElement = document.getElementById('modalSeguimiento');
         if (modalElement) miModal = new bootstrap.Modal(modalElement);
@@ -246,21 +275,22 @@
 
     async function cargarTodo() {
         try {
-            const comiSnap = await db.collection('comisionistas').get();
-            listaComisionistas = comiSnap.docs.map(d => ({id: d.id, ...d.data()}));
-            
-            const selectComis = document.getElementById('selectComis');
-            selectComis.innerHTML = listaComisionistas.map(c => `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`).join('');
+            if (usuarioActualRol === 'admin') {
+                const comiSnap = await db.collection('comisionistas').get();
+                listaComisionistas = comiSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                const selectComis = document.getElementById('selectComis');
+                if(selectComis) selectComis.innerHTML = listaComisionistas.map(c => `<option value="${c.nombreCompleto}">${c.nombreCompleto}</option>`).join('');
+            }
 
-            const leadsSnap = await db.collection('leads').get();
+            let leadsQuery = db.collection('leads');
+            if (usuarioActualRol !== 'admin') {
+                leadsQuery = leadsQuery.where('creador', '==', usuarioActualEmail);
+            }
+
+            const leadsSnap = await leadsQuery.get();
             listaLeads = leadsSnap.docs.map(d => ({id: d.id, ...d.data()}));
-
             renderizarTabla(listaLeads);
-            if(listaComisionistas.length > 0) actualizarDetalleComis();
-        } catch (error) {
-            console.error("Error cargando datos:", error);
-            alert("Error al cargar la base de datos.");
-        }
+        } catch (error) { console.error("Error cargando datos:", error); }
     }
 
     function renderizarTabla(leads) {
@@ -268,7 +298,8 @@
         tbody.innerHTML = '';
 
         if (leads.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay leads</td></tr>';
+            const spanCols = usuarioActualRol === 'admin' ? 5 : 4;
+            tbody.innerHTML = `<tr><td colspan="${spanCols}" class="text-center">No hay leads para mostrar</td></tr>`;
             return;
         }
 
@@ -276,28 +307,51 @@
 
         leads.forEach(l => {
             const fAlta = (l.fAltaLead && l.fAltaLead.includes('T')) ? l.fAltaLead.split('T')[0] : (l.fAltaLead || '-');
-            const fComi = (l.fAltaComi && l.fAltaComi.includes('T')) ? l.fAltaComi.split('T')[0] : (l.fAltaComi || '-');
             const fCont = (l.fUltContacto && l.fUltContacto.includes('T')) ? l.fUltContacto.split('T')[0] : (l.fUltContacto || '-');
             const badgeClass = (l.origen && l.origen.includes('Comi')) ? 'bg-warning text-dark' : 'bg-info text-dark';
             const celLink = l.celular ? l.celular.toString().replace(/\D/g, '') : '';
+            const jsonLead = JSON.stringify(l).replace(/'/g, "&apos;");
 
-            tbody.innerHTML += `
-                <tr>
-                    <td><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || ''}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
-                    <td>${l.celular}</td>
-                    <td><span class="badge ${badgeClass}">${l.origen}</span><br><small class="text-muted" style="font-size:0.7rem">Socio: ${fComi}</small></td>
-                    <td><div class="fw-bold" style="font-size:0.8rem">Ult: ${fCont}</div><small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.comentarios || '-'}</small></td>
-                    <td class="text-center">
-                        <div class="d-flex justify-content-center gap-1">
-                            <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
-                            <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${JSON.stringify(l).replace(/'/g, "&apos;")})'>📝</button>
-                        </div>
-                    </td>
-                </tr>`;
+            if (usuarioActualRol === 'admin') {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || ''}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
+                        <td>${l.celular}</td>
+                        <td><span class="badge ${badgeClass}">${l.origen}</span><br><small class="text-muted" style="font-size:0.7rem">Por: ${l.creador || 'Sistema'}</small></td>
+                        <td><div class="fw-bold" style="font-size:0.8rem">Ult: ${fCont}</div><small class="text-secondary" style="display:block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.comentarios || '-'}</small></td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-1">
+                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                                <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${jsonLead})'>📝</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML += `
+                    <tr style="border-bottom: none;">
+                        <td class="border-bottom-0"><strong>${l.nombre}</strong><br><small class="text-primary">${l.email || 'Sin email'}</small><br><small class="text-muted" style="font-size:0.7rem">Alta: ${fAlta}</small></td>
+                        <td class="border-bottom-0 align-middle">${l.celular}</td>
+                        <td class="border-bottom-0 align-middle"><span class="badge bg-secondary">${fCont}</span></td>
+                        <td class="text-center border-bottom-0 align-middle">
+                            <div class="d-flex justify-content-center gap-1">
+                                <a href="https://wa.me/${celLink}" target="_blank" class="btn btn-success btn-sm">💬</a>
+                                <button class="btn btn-primary btn-sm" onclick='prepararSeguimiento(${jsonLead})'>📝</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="p-0 border-bottom">
+                            <div class="scroll-seguimiento mx-2 mb-3 shadow-sm">
+                                <strong>Historial de Seguimiento:</strong><br>${l.comentarios || 'Aún no hay comentarios.'}
+                            </div>
+                        </td>
+                    </tr>`;
+            }
         });
     }
 
     function toggleComisionistas() {
+        if (usuarioActualRol !== 'admin') return;
         const origen = document.getElementById('origen').value;
         const div = document.getElementById('divComisionistas');
         div.style.display = (origen === 'Comisionista') ? 'block' : 'none';
@@ -317,26 +371,32 @@
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
 
-        let origenFinal = document.getElementById('origen').value;
-        let fAltaComi = "-";
-        if (origenFinal === 'Comisionista') {
-            origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
-            const cData = listaComisionistas.find(c => c.nombreCompleto === document.getElementById('selectComis').value);
-            if(cData) fAltaComi = cData.fechaAlta || '-';
+        let origenFinal = "Genuino";
+        if (usuarioActualRol === 'admin') {
+            origenFinal = document.getElementById('origen').value;
+            if (origenFinal === 'Comisionista') {
+                origenFinal = "Comisionista: " + document.getElementById('selectComis').value;
+            }
+        } else {
+            origenFinal = "Comisionista (Autocargado)";
         }
 
         const hoy = new Date().toLocaleDateString('en-CA');
         const datos = {
-            nombre: document.getElementById('nombre').value, celular: document.getElementById('celular').value,
-            email: document.getElementById('email').value, origen: origenFinal,
+            nombre: document.getElementById('nombre').value, 
+            celular: document.getElementById('celular').value,
+            email: document.getElementById('email').value, 
+            origen: origenFinal,
             comentarios: document.getElementById('comentarios').value,
-            fAltaComi: fAltaComi, fAltaLead: hoy, fUltContacto: hoy
+            fAltaLead: hoy, 
+            fUltContacto: hoy,
+            creador: usuarioActualEmail
         };
 
         try {
             await db.collection('leads').add(datos);
             document.getElementById('leadForm').reset();
-            toggleComisionistas();
+            document.getElementById('divComisionistas').style.display = 'none';
             cargarTodo();
         } catch (err) { alert("Error guardando."); } 
         finally { btn.disabled = false; }
