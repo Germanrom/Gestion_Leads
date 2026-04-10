@@ -1,4 +1,5 @@
 'mermaid'
+<pre>
 graph TD
     Usuario((👤 Usuario /<br>Comisionista))
     
@@ -36,3 +37,4 @@ graph TD
     style Login fill:#ffe0b2,stroke:#f57c00,stroke-width:1px
     style Verificador fill:#c8e6c9,stroke:#388e3c,stroke-width:1px
     style Servicios fill:#c8e6c9,stroke:#388e3c,stroke-width:1px
+    </pre>
