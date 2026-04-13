@@ -23,10 +23,10 @@
     <div class="card shadow border-0">
         <div class="card-body p-5 text-center">
             <h3 class="text-primary mb-3">FivePeaks CRM</h3>
-            <p class="text-muted mb-4 small">Acceso exclusivo para socios autorizados.</p>
+            <p class="text-muted mb-4 small">Acceso exclusivo para socios de FivePeaks.</p>
             <button id="btnGoogleLogin" class="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center py-2">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 20px; margin-right: 10px;">
-                Continuar con Google
+                Ingresa...
             </button>
             <div id="loginError" class="text-danger mt-3 text-center small fw-bold" style="display:none;"></div>
         </div>
@@ -56,14 +56,14 @@
 
     <div id="vistaLeads">
         <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-primary text-white">Registrar Nuevo Lead</div>
+            <div class="card-header bg-primary text-white">Registrar Nuevo Cliente</div>
             <div class="card-body">
                 <form id="leadForm" class="row g-3">
                     <div class="col-md-6"><label class="form-label font-weight-bold">Nombre / Razón Social</label><input type="text" id="nombre" class="form-control" required></div>
                     <div class="col-md-3"><label class="form-label">Celular</label><input type="tel" id="celular" class="form-control" required></div>
                     <div class="col-md-3"><label class="form-label">Email</label><input type="email" id="email" class="form-control"></div>
                     <div class="col-md-4" id="divContenedorOrigen">
-                        <label class="form-label">Origen del Lead</label>
+                        <label class="form-label">Origen del Cliente</label>
                         <select id="origen" class="form-select" onchange="toggleComisionistas()">
                             <option value="Genuino">Genuino de Empresa</option>
                             <option value="Comisionista">Comisionista</option>
